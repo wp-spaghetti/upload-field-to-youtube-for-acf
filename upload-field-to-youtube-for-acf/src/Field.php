@@ -161,24 +161,20 @@ class Field extends \acf_field
         add_action(FRUGAN_UFTYFACF_NAME.'__check_oauth_token', [$this, 'check_oauth_token']);
     }
 
+    // https://developers.google.com/youtube/terms/branding-guidelines
+    // https://www.youtube.com/yt/about/brand-resources/#logos-icons-colors
+    // YouTube's ToS only allow custom icons; dashicons like `dashicons-video-alt3` are not allowed.
     public function admin_menu(): void
     {
-        if (current_user_can('manage_options')) {
+        if (current_user_can('manage_options') || current_user_can('manage_'.$this->name)) {
+            $capability = current_user_can('manage_options') ? 'manage_options' : 'manage_'.$this->name;
+
             add_options_page(
                 $this->label,               // Page title
                 $this->label,               // Menu title
-                'manage_options',           // Capability
+                $capability,                // Capability
                 $this->name,                // Menu slug
                 [$this, 'settings_page'],   // Callback function
-            );
-        } elseif (current_user_can('manage_'.$this->name)) {
-            add_menu_page(
-                $this->label,               // Page title
-                $this->label,               // Menu title
-                'manage_'.$this->name,      // Capability
-                $this->name,                // Menu slug
-                [$this, 'settings_page'],   // Callback function
-                'dashicons-video-alt3'      // Icon (optional)
             );
         }
     }
