@@ -57,7 +57,7 @@ class Field extends \acf_field
          *
          * No spaces. Underscores allowed.
          */
-        $this->name = 'youtube_uploader';
+        $this->name = FRUGAN_UFTYFACF_NAME_UNDERSCORE;
 
         $this->title = __('Upload Field to YouTube for ACF', 'upload-field-to-youtube-for-acf');
 
@@ -110,7 +110,7 @@ class Field extends \acf_field
          * Allows JS strings to be translated in PHP and loaded in JS via:
          *
          * ```js
-         * const errorMessage = acf._e("youtube_uploader", "error");
+         * const errorMessage = acf._e(this.field.data('type'), "error");
          * ```
          */
         $this->l10n = [
@@ -138,6 +138,8 @@ class Field extends \acf_field
             'version' => FRUGAN_UFTYFACF_VERSION,
             'url' => FRUGAN_UFTYFACF_URL,
             'path' => FRUGAN_UFTYFACF_PATH,
+            'debug' => WP_DEBUG,
+            'locale' => get_locale(),
             'cache_busting' => \defined('FRUGAN_UFTYFACF_CACHE_BUSTING_ENABLED') && !empty(FRUGAN_UFTYFACF_CACHE_BUSTING_ENABLED) && !is_numeric(FRUGAN_UFTYFACF_CACHE_BUSTING_ENABLED) && filter_var(FRUGAN_UFTYFACF_CACHE_BUSTING_ENABLED, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ? true : false,
         ];
 
@@ -804,7 +806,7 @@ class Field extends \acf_field
         $this->check_oauth_token();
 
         if (!$this->get_access_token()) {
-            if (!current_user_can('manage_options') || !current_user_can('manage_'.$this->name)) {
+            if (!current_user_can('manage_options') && !current_user_can('manage_'.$this->name)) {
                 $data = [
                     'status' => 'error',
                     'message' => __('App not authorized, contact your system administrator.', 'upload-field-to-youtube-for-acf'),
@@ -947,7 +949,7 @@ class Field extends \acf_field
             // To lift this restriction, each API project must undergo an audit to verify compliance
             // with the Terms of Service. Please see the API Revision History for more details.
             $googleServiceYouTubeVideoStatus->setPrivacyStatus($field['privacy_status']);
-            $googleServiceYouTubeVideoStatus->setSelfDeclaredMadeForKids($field['made_for_kids']); // or setMadeForKids()
+            $googleServiceYouTubeVideoStatus->setSelfDeclaredMadeForKids((bool) $field['made_for_kids']); // or setMadeForKids()
 
             $googleServiceYouTubeVideo = new \Google_Service_YouTube_Video();
             $googleServiceYouTubeVideo->setSnippet($googleServiceYouTubeVideoSnippet);

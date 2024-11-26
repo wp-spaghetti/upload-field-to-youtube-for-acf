@@ -1,8 +1,10 @@
 /**
- * Included when youtube_uploader fields are rendered for editing by publishers.
+ * Included when fields are rendered for editing by publishers.
  */
  ( function( $ ) {
-	class YTUploader {
+    window.FRUGAN_UFTYFACF = window.FRUGAN_UFTYFACF || {};
+
+	FRUGAN_UFTYFACF.Field = class {
 		/**
 		 * $field is a jQuery object wrapping field elements in the editor.
 		 */
@@ -378,11 +380,11 @@
 		 * Run initialize_field when existing fields of this type load,
 		 * or when new fields are appended via repeaters or similar.
 		 */
-		acf.add_action( 'ready_field/type=youtube_uploader', function($field) {
-            new YTUploader($field);
+		acf.add_action( 'ready_field/type=upload_field_to_youtube_for_acf', function($field) {
+            new FRUGAN_UFTYFACF.Field($field);
         });
-		acf.add_action( 'append_field/type=youtube_uploader', function($field) {
-            new YTUploader($field);
+		acf.add_action( 'append_field/type=upload_field_to_youtube_for_acf', function($field) {
+            new FRUGAN_UFTYFACF.Field($field);
         });
 	}
 } )( jQuery );

@@ -8,7 +8,7 @@
                 "label": "Video",
                 "name": "youtube_video_id",
                 "aria-label": "",
-                "type": "youtube_uploader",
+                "type": "upload_field_to_youtube_for_acf",
                 "instructions": "",
                 "required": 1,
                 "conditional_logic": 0,
