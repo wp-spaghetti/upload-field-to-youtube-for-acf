@@ -760,16 +760,34 @@ class Field extends \acf_field
     {
         $this->set_access_token(get_option(FRUGAN_UFTYFACF_NAME.'__access_token'));
 
-        if ($this->get_access_token()) {
+        if (!empty($access_token = $this->get_access_token())) {
             $this->set_google_client();
 
-            $this->client->setAccessToken($this->get_access_token());
+            try {
+                $this->client->setAccessToken($access_token);
+            } catch (\Exception $exception) {
+                // FIXED - https://github.com/inpsyde/Wonolog/blob/2.x/src/HookLogFactory.php#L135
+                // use `$exception->getMessage()` instead of `$exception`, because Wonolog
+                // assigns the ERROR level to messages that are instances of Throwable
+                $this->log('warning', $exception->getMessage(), ['access_token' => $access_token]);
+            }
 
-            if ($this->client->isAccessTokenExpired()) {
-                $this->set_access_token($this->client->fetchAccessTokenWithRefreshToken($this->client->getRefreshToken()));
-                update_option(FRUGAN_UFTYFACF_NAME.'__access_token', $this->get_access_token());
+            try {
+                if ($this->client->isAccessTokenExpired()) {
+                    if (!empty($refresh_token = $this->client->getRefreshToken())) {
+                        $this->set_access_token($this->client->fetchAccessTokenWithRefreshToken($refresh_token));
 
-                $this->client->setAccessToken($this->get_access_token());
+                        $access_token = $this->get_access_token();
+                        $this->client->setAccessToken($access_token);
+                        update_option(FRUGAN_UFTYFACF_NAME.'__access_token', $access_token);
+                    } else {
+                        throw new \UnexpectedValueException(\sprintf(__('Unable to retrieve "%1$s"', 'upload-field-to-youtube-for-acf'), 'refresh_token'));
+                    }
+                }
+            } catch (\Exception $exception) {
+                $this->log('error', $exception, ['access_token' => $access_token, 'refresh_token' => $refresh_token ?? null]);
+                delete_option(FRUGAN_UFTYFACF_NAME.'__access_token');
+                $this->set_access_token(null);
             }
         }
     }
@@ -805,7 +823,7 @@ class Field extends \acf_field
 
         $this->check_oauth_token();
 
-        if (!$this->get_access_token()) {
+        if (empty($access_token = $this->get_access_token()) || !isset($access_token['access_token'])) {
             if (!current_user_can('manage_options') && !current_user_can('manage_'.$this->name)) {
                 $data = [
                     'status' => 'error',
