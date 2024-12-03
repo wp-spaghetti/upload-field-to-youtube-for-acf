@@ -108,10 +108,10 @@ If you use Composer to manage WordPress plugins, you can install it from this re
             "type": "package",
             "package": {
                 "name": "frugan-dev/upload-field-to-youtube-for-acf",
-                "version": "0.2.0",
+                "version": "0.2.1",
                 "type": "wordpress-plugin",
                 "dist": {
-                    "url": "https://github.com/frugan-dev/upload-field-to-youtube-for-acf/releases/download/v0.2.0/upload-field-to-youtube-for-acf.zip",
+                    "url": "https://github.com/frugan-dev/upload-field-to-youtube-for-acf/releases/download/v0.2.1/upload-field-to-youtube-for-acf.zip",
                     "type": "zip"
                 }
             }
