@@ -30,7 +30,7 @@ class Bootstrap
         add_action('deactivated_plugin', [$this, 'deactivated_plugin']);
 
         if (!$this->is_mu_plugin()) {
-            delete_option(FRUGAN_UFTYFACF_NAME.'__activated');
+            delete_option(FRUGAN_UFTYFACF_NAME_UNDERSCORE.'__activated');
 
             register_activation_hook(FRUGAN_UFTYFACF_BASENAME, static fn (): array => [Field::class, 'activate']);
             register_deactivation_hook(FRUGAN_UFTYFACF_BASENAME, static fn (): array => [Field::class, 'deactivate']);
@@ -74,9 +74,9 @@ class Bootstrap
             return;
         }
 
-        if ($this->is_mu_plugin() && !get_option(FRUGAN_UFTYFACF_NAME.'__activated')) {
+        if ($this->is_mu_plugin() && !get_option(FRUGAN_UFTYFACF_NAME_UNDERSCORE.'__activated')) {
             Field::activate();
-            update_option(FRUGAN_UFTYFACF_NAME.'__activated', true);
+            update_option(FRUGAN_UFTYFACF_NAME_UNDERSCORE.'__activated', true);
         }
 
         acf_register_field_type(Field::class);

@@ -160,7 +160,10 @@ class Field extends \acf_field
         add_action('wp_ajax_save_youtube_video_id', [$this, 'wp_ajax_save_youtube_video_id']);
         add_action('wp_ajax_get_videos_by_playlist', [$this, 'wp_ajax_get_videos_by_playlist']);
 
-        add_action(FRUGAN_UFTYFACF_NAME.'__check_oauth_token', [$this, 'check_oauth_token']);
+        add_action($this->name.'__check_oauth_token', [$this, 'check_oauth_token']);
+
+        // Migrate old options format if needed
+        $this->migrate_options();
     }
 
     // https://developers.google.com/youtube/terms/branding-guidelines
@@ -189,11 +192,33 @@ class Field extends \acf_field
         }
 
         if (isset($_POST['action']) && 'logout' === $_POST['action']) {
-            delete_option(FRUGAN_UFTYFACF_NAME.'__access_token');
+            delete_option($this->name.'__access_token');
 
             add_action('admin_notices', static function (): void {
                 echo '<div class="notice notice-success is-dismissible">';
                 echo '<p><strong>'.esc_html__('Successfully logged out from YouTube.', 'upload-field-to-youtube-for-acf').'</strong></p>';
+                echo '</div>';
+            });
+        }
+
+        // Handle settings save
+        if (isset($_POST['action']) && $_POST['action'] === $this->name.'_save_settings') {
+            if (!wp_verify_nonce($_POST[$this->name.'_settings_nonce'] ?? '', $this->name.'_save_settings')) {
+                wp_die(__('Security check failed', 'upload-field-to-youtube-for-acf'));
+            }
+
+            if (!current_user_can('manage_options') && !current_user_can('manage_'.$this->name)) {
+                wp_die(__('Insufficient permissions', 'upload-field-to-youtube-for-acf'));
+            }
+
+            // Allow extensions to save their settings
+            do_action($this->name.'_save_settings', $_POST);
+
+            $this->log('info', __('Plugin settings saved successfully', 'upload-field-to-youtube-for-acf'));
+
+            add_action('admin_notices', static function (): void {
+                echo '<div class="notice notice-success is-dismissible">';
+                echo '<p><strong>'.esc_html__('Settings saved successfully.', 'upload-field-to-youtube-for-acf').'</strong></p>';
                 echo '</div>';
             });
         }
@@ -239,7 +264,7 @@ class Field extends \acf_field
     /**
      * Settings to display when users configure a field of this type.
      *
-     * These settings appear on the ACF “Edit Field Group” admin page when
+     * These settings appear on the ACF "Edit Field Group" admin page when
      * setting up the field.
      *
      * @param array $field
@@ -706,6 +731,23 @@ class Field extends \acf_field
                 submit_button(__('Logout from YouTube', 'upload-field-to-youtube-for-acf'));
                 echo '</form>';
 
+                // Check if there are any extensions that want to add settings
+                ob_start();
+                do_action($this->name.'_'.__FUNCTION__.'_after', $oauth, $this);
+                $output = ob_get_clean();
+
+                if (!empty(trim($output))) {
+                    echo '<hr>';
+                    echo '<form method="post" action="">';
+                    wp_nonce_field($this->name.'_save_settings', $this->name.'_settings_nonce');
+                    echo '<input type="hidden" name="action" value="'.$this->name.'_save_settings">';
+
+                    echo $output;
+
+                    submit_button(__('Save Settings', 'upload-field-to-youtube-for-acf'));
+                    echo '</form>';
+                }
+
                 break;
 
             case 'error':
@@ -758,7 +800,7 @@ class Field extends \acf_field
 
     public function check_oauth_token(): void
     {
-        $this->set_access_token(get_option(FRUGAN_UFTYFACF_NAME.'__access_token'));
+        $this->set_access_token(get_option($this->name.'__access_token'));
 
         if (!empty($access_token = $this->get_access_token())) {
             $this->set_google_client();
@@ -779,14 +821,14 @@ class Field extends \acf_field
 
                         $access_token = $this->get_access_token();
                         $this->client->setAccessToken($access_token);
-                        update_option(FRUGAN_UFTYFACF_NAME.'__access_token', $access_token);
+                        update_option($this->name.'__access_token', $access_token);
                     } else {
                         throw new \UnexpectedValueException(\sprintf(__('Unable to retrieve "%1$s"', 'upload-field-to-youtube-for-acf'), 'refresh_token'));
                     }
                 }
             } catch (\Exception $exception) {
                 $this->log('error', $exception, ['access_token' => $access_token, 'refresh_token' => $refresh_token ?? null]);
-                delete_option(FRUGAN_UFTYFACF_NAME.'__access_token');
+                delete_option($this->name.'__access_token');
                 $this->set_access_token(null);
             }
         }
@@ -794,17 +836,17 @@ class Field extends \acf_field
 
     public static function activate(): void
     {
-        if (!wp_next_scheduled(FRUGAN_UFTYFACF_NAME.'__check_oauth_token')) {
-            wp_schedule_event(time(), 'hourly', FRUGAN_UFTYFACF_NAME.'__check_oauth_token');
+        if (!wp_next_scheduled(FRUGAN_UFTYFACF_NAME_UNDERSCORE.'__check_oauth_token')) {
+            wp_schedule_event(time(), 'hourly', FRUGAN_UFTYFACF_NAME_UNDERSCORE.'__check_oauth_token');
         }
     }
 
     public static function deactivate($network_deactivating = false): void
     {
-        delete_option(FRUGAN_UFTYFACF_NAME.'__access_token');
+        delete_option(FRUGAN_UFTYFACF_NAME_UNDERSCORE.'__access_token');
 
-        $timestamp = wp_next_scheduled(FRUGAN_UFTYFACF_NAME.'__check_oauth_token');
-        wp_unschedule_event($timestamp, FRUGAN_UFTYFACF_NAME.'__check_oauth_token');
+        $timestamp = wp_next_scheduled(FRUGAN_UFTYFACF_NAME_UNDERSCORE.'__check_oauth_token');
+        wp_unschedule_event($timestamp, FRUGAN_UFTYFACF_NAME_UNDERSCORE.'__check_oauth_token');
     }
 
     public function handle_oauth(): array
@@ -840,7 +882,7 @@ class Field extends \acf_field
             if (isset($_GET['code'])) {
                 $this->client->authenticate(wp_unslash($_GET['code']));
                 $this->set_access_token($this->client->getAccessToken());
-                update_option(FRUGAN_UFTYFACF_NAME.'__access_token', $this->get_access_token());
+                update_option($this->name.'__access_token', $this->get_access_token());
 
                 $data = [
                     'status' => 'success',
@@ -1142,5 +1184,64 @@ class Field extends \acf_field
     public function is_wonolog_active()
     {
         return \function_exists('did_action') && class_exists(Configurator::class) && \defined(Configurator::class.'::ACTION_SETUP') && did_action(Configurator::ACTION_SETUP);
+    }
+
+    /**
+     * Migrate options from old hyphen format to underscore format if needed.
+     */
+    private function migrate_options(): void
+    {
+        // Define migrations: old_key => new_key
+        $option_migrations = [
+            FRUGAN_UFTYFACF_NAME.'__access_token' => $this->name.'__access_token',
+            FRUGAN_UFTYFACF_NAME.'__activated' => $this->name.'__activated',
+        ];
+
+        // Migrate options
+        foreach ($option_migrations as $old_key => $new_key) {
+            $this->migrate_option($old_key, $new_key);
+        }
+
+        // Migrate scheduled events: old_hook => new_hook
+        $hook_migrations = [
+            FRUGAN_UFTYFACF_NAME.'__check_oauth_token' => $this->name.'__check_oauth_token',
+        ];
+
+        // Migrate scheduled events
+        foreach ($hook_migrations as $old_hook => $new_hook) {
+            $this->migrate_scheduled_event($old_hook, $new_hook);
+        }
+    }
+
+    /**
+     * Migrate a single option from old key to new key.
+     */
+    private function migrate_option(string $old_key, string $new_key): void
+    {
+        if ($old_key === $new_key) {
+            return;
+        }
+
+        $old_value = get_option($old_key);
+        if ($old_value && !get_option($new_key)) {
+            update_option($new_key, $old_value);
+            delete_option($old_key);
+        }
+    }
+
+    /**
+     * Migrate a scheduled event from old hook to new hook.
+     */
+    private function migrate_scheduled_event(string $old_hook, string $new_hook): void
+    {
+        if ($old_hook === $new_hook) {
+            return;
+        }
+
+        $timestamp = wp_next_scheduled($old_hook);
+        if ($timestamp && !wp_next_scheduled($new_hook)) {
+            wp_unschedule_event($timestamp, $old_hook);
+            wp_schedule_event(time(), 'hourly', $new_hook);
+        }
     }
 }
