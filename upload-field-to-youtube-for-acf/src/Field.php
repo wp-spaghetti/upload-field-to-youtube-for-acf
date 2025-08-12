@@ -24,11 +24,14 @@ if (!\defined('ABSPATH')) {
 
 /**
  * Class Field.
- *
- * @property string $title
  */
 class Field extends \acf_field
 {
+    /**
+     * Field type title.
+     */
+    public string $title;
+
     /**
      * Controls field type visibilty in REST requests.
      *

@@ -37,6 +37,9 @@
         "wpackagist-plugin/wp-cfm": "^1.7",
         "wpackagist-plugin/wp-debugging": "^2.11"
     },
+    "suggest": {
+        "inpsyde/wonolog": "For enhanced logging capabilities and better debugging experience"
+    },
     "repositories": [
         {
             "type": "composer",
