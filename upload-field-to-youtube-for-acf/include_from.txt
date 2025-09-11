@@ -1,7 +1,11 @@
-+ asset/
-+ asset/**
-+ lang/
-+ lang/**
++ assets/
++ assets/**
++ include/
++ include/**
++ languages/
++ languages/**
++ resources/
++ resources/**
 + src/
 + src/**
 + vendor/

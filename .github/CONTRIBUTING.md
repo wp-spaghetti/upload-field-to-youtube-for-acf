@@ -1,41 +1,234 @@
 # Contributing
 
+Thank you for considering contributing! This document outlines the process for contributing to this project.
+
 When contributing to this repository, please first discuss the change you wish to make via issue, email, or any other method with the owners of this repository before making a change.
 
 Please note we have a [code of conduct](CODE_OF_CONDUCT.md), please follow it in all your interactions with the project.
 
-## Development environment setup
+## Development Workflow
 
-To set up a development environment, please follow these steps:
+We use [git-flow workflow](https://danielkummer.github.io/git-flow-cheatsheet/) and [conventional commits](https://www.conventionalcommits.org).
 
-1. Clone the repo
+### Branch Structure
+- `main` - Production-ready code
+- `develop` - Development branch
+- `feature/*` - New features
+- `bugfix/*` - Bug fixes
+- `hotfix/*` - Critical production fixes
 
-   ```sh
-   git clone https://github.com/frugan-dev/upload-field-to-youtube-for-acf
+### Getting Started
+
+1. Fork the repository
+2. Clone your fork: `git clone https://github.com/your-username/upload-field-to-youtube-for-acf.git`
+3. Create a feature branch: `git checkout -b feature/your-feature-name`
+4. Install dependencies: `composer install`
+5. Make your changes
+6. Run tests: `composer test`
+7. Run quality checks: `composer qa`
+8. Commit using conventional commits
+9. Push and create a pull request
+
+## Development Setup
+
+### Requirements
+- PHP 8.0 or higher
+- Composer
+- Git
+
+### Installation
+```bash
+git clone https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf.git
+cd upload-field-to-youtube-for-acf
+composer install
    ```
 
-2. TODO
+### Running Tests
+```bash
+# Run all tests
+composer test
 
-## Issues and feature requests
+# Run specific test suite
+vendor/bin/phpunit tests/FooTest.php
 
-You've found a bug in the source code, a mistake in the documentation or maybe you'd like a new feature? Take a look at [GitHub Discussions](https://github.com/frugan-dev/upload-field-to-youtube-for-acf/discussions) to see if it's already being discussed. You can help us by [submitting an issue on GitHub](https://github.com/frugan-dev/upload-field-to-youtube-for-acf/issues). Before you create an issue, make sure to search the issue archive -- your issue may have already been addressed!
+# Run with coverage
+vendor/bin/phpunit --coverage-html coverage/
+```
 
-Please try to create bug reports that are:
+### Code Quality
+```bash
+# Run all quality checks
+composer quality
 
-- _Reproducible._ Include steps to reproduce the problem.
-- _Specific._ Include as much detail as possible: which version, what environment, etc.
-- _Unique._ Do not duplicate existing opened issues.
-- _Scoped to a Single Bug._ One bug per report.
+# Individual tools
+composer lint          # Linters
+composer analysis      # Static analysis
+composer security      # Security check
+composer quality       # Code quality
+```
 
-**Even better: Submit a pull request with a fix or new feature!**
+## Coding Standards
 
-### How to submit a Pull Request
+### PHP Standards
+- Follow PSR-12 coding standard
+- Use strict typing: `declare(strict_types=1);`
+- Document all public methods with PHPDoc
+- Use meaningful variable and method names
 
-1. Search our repository for open or closed
-   [Pull Requests](https://github.com/frugan-dev/upload-field-to-youtube-for-acf/pulls)
-   that relate to your submission. You don't want to duplicate effort.
-2. Fork the project
-3. Create your feature branch (`git checkout -b feat/amazing_feature`)
-4. Commit your changes (`git commit -m 'feat: add amazing_feature'`) uses [conventional commits](https://www.conventionalcommits.org), so please follow the specification in your commit messages.
-5. Push to the branch (`git push origin feat/amazing_feature`)
-6. [Open a Pull Request](https://github.com/frugan-dev/upload-field-to-youtube-for-acf/compare?expand=1)
+### Commit Messages
+We use [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+type(scope): description
+
+[optional body]
+
+[optional footer]
+```
+
+**Types:**
+- `feat:` New features
+- `fix:` Bug fixes
+- `docs:` Documentation changes
+- `style:` Code style changes (no logic changes)
+- `refactor:` Code refactoring
+- `test:` Adding or updating tests
+- `chore:` Maintenance tasks
+
+**Examples:**
+```
+feat(environment): add support for custom environment detection
+fix(docker): improve container detection accuracy
+docs(readme): update installation instructions
+test(hooks): add comprehensive hook testing
+```
+
+### Code Style
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace WpSpaghetti\ExampleNamespace;
+
+/**
+ * Class documentation.
+ */
+class ExampleClass
+{
+    /**
+     * Method documentation.
+     */
+    public function exampleMethod(string $param): bool
+    {
+        // Method implementation
+        return true;
+    }
+}
+```
+
+## Testing Guidelines
+
+### Test Structure
+- Unit tests in `tests/` directory
+- Test files should end with `Test.php`
+- Use descriptive test method names
+- Include both positive and negative test cases
+
+### Test Example
+```php
+public function testMethodReturnsExpectedValue(): void
+{
+    $result = ExampleClass::get('TEST_VAR', 'default');
+    self::assertSame('expected', $result);
+}
+```
+
+### Mock Data
+Use the provided mock functions for testing:
+- `set_mock_*()`
+
+## Documentation
+
+### Code Documentation
+- All public methods must have PHPDoc blocks
+- Include `@param` and `@return` annotations
+- Document complex logic with inline comments
+- Use clear, concise language
+
+### README Updates
+When adding new features:
+- Update the feature list
+- Add usage examples
+- Update the API reference if needed
+
+## Pull Request Process
+
+1. **Create Feature Branch**
+   ```bash
+   git checkout develop
+   git checkout -b feature/your-feature
+   ```
+
+2. **Make Changes**
+   - Write code following the standards above
+   - Add/update tests for your changes
+   - Update documentation if needed
+
+3. **Test Your Changes**
+   ```bash
+   composer quality  # Run all quality checks
+   composer test     # Run all tests
+   ```
+
+4. **Commit Changes**
+   ```bash
+   git add .
+   git commit -m "feat: add new feature description"
+   ```
+
+5. **Push and Create PR**
+   ```bash
+   git push origin feature/your-feature
+   ```
+   Then create a pull request against the `develop` branch.
+
+### PR Requirements
+- All tests must pass
+- Code coverage should not decrease
+- Follow the PR template
+- Link to related issues
+- Use conventional commit messages
+
+## Release Process
+
+Releases are automated through GitHub Actions:
+
+1. Merge to `main` triggers release workflow
+2. Conventional commits determine version bump
+3. Changelog is automatically updated
+4. GitHub release is created
+5. Packagist is notified
+
+## Security
+
+If you discover a security vulnerability, please follow our [Security Policy](SECURITY.md).
+
+## Questions?
+
+- Create an issue for questions about usage
+- Join discussions for feature planning
+- Contact maintainers for sensitive issues
+
+## License
+
+By contributing, you agree that your contributions will be licensed under the GPL-3.0-or-later license.
+
+## Recognition
+
+Contributors will be recognized in:
+- GitHub contributors list
+- Release notes for significant contributions
+- README acknowledgments for major features
+
+Thank you for contributing! 🎉

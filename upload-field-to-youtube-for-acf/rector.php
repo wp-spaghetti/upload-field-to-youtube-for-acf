@@ -24,18 +24,16 @@ return RectorConfig::configure()
         ]
     )
     ->withRootFiles()
-    ->withSets(
-        [
-            SetList::DEAD_CODE,
-            // SetList::CODE_QUALITY,
-            SetList::CODING_STYLE,
-            SetList::TYPE_DECLARATION,
-            SetList::PRIVATIZATION,
-            SetList::NAMING,
-            SetList::INSTANCEOF,
-            SetList::EARLY_RETURN,
-            // SetList::STRICT_BOOLEANS,
-            LevelSetList::UP_TO_PHP_80,
-        ]
-    )
+    ->withSets([
+        SetList::DEAD_CODE,
+        // SetList::CODE_QUALITY,
+        SetList::CODING_STYLE,
+        SetList::TYPE_DECLARATION,
+        SetList::PRIVATIZATION,
+        SetList::NAMING,
+        SetList::INSTANCEOF,
+        SetList::EARLY_RETURN,
+        // SetList::STRICT_BOOLEANS,
+        LevelSetList::UP_TO_PHP_80,
+    ])
 ;

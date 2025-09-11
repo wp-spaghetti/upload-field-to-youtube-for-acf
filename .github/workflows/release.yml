@@ -1,0 +1,195 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches:
+      - main
+      - 'support/*'
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: write
+  checks: write
+  repository-projects: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success' && !contains(github.event.workflow_run.head_commit.message, 'skip ci')
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      released: ${{ steps.version.outputs.released }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          # Use a personal access token or GitHub App token with bypass permissions
+          token: ${{ secrets.SEMANTIC_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Semantic Release
+        uses: cycjimmy/semantic-release-action@v5
+        with:
+          extra_plugins: |
+            @semantic-release/changelog@latest
+            @semantic-release/git@latest
+            conventional-changelog-conventionalcommits@latest
+        env:
+          # Use the token with bypass permissions
+          GITHUB_TOKEN: ${{ secrets.SEMANTIC_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: github-actions[bot]@users.noreply.github.com
+        
+      - name: Get released version
+        id: version
+        run: |
+          VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$VERSION" ]; then
+            echo "version=${VERSION#v}" >> $GITHUB_OUTPUT
+            echo "released=true" >> $GITHUB_OUTPUT
+          else
+            echo "released=false" >> $GITHUB_OUTPUT
+          fi
+
+  # Download translations from Crowdin for releases
+  crowdin_download:
+    name: Download Translations
+    runs-on: ubuntu-latest
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    outputs:
+      translations_available: ${{ steps.check.outputs.translations_available }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          ref: v${{ needs.release.outputs.version }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+
+      - name: Install Crowdin CLI
+        run: npm install -g @crowdin/cli
+
+      - name: Download translations from Crowdin
+        run: |
+          crowdin download --all
+          echo "Downloaded translations from Crowdin"
+        env:
+          CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+
+      - name: Convert PO to MO files
+        run: |
+          sudo apt-get update && sudo apt-get install -y gettext
+          find languages/ -name "*.po" -exec sh -c 'msgfmt "$0" -o "${0%.po}.mo"' {} \;
+          echo "Converted PO files to MO format"
+
+      - name: Check if translations were downloaded
+        id: check
+        run: |
+          if [ -n "$(find languages/ -name "*.mo" -print -quit)" ]; then
+            echo "translations_available=true" >> $GITHUB_OUTPUT
+          else
+            echo "translations_available=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload translations artifact
+        if: steps.check.outputs.translations_available == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: translations
+          path: languages/
+          retention-days: 1
+
+  deploy:
+    name: Deploy (Wordpress ${{ matrix.wordpress_tag }})
+    runs-on: ubuntu-latest
+    needs: [release, crowdin_download]
+    if: needs.release.outputs.released == 'true'
+
+    strategy:
+      matrix:
+        mariadb_tag: [
+          latest
+        ]
+        wordpress_tag: [
+          5.9.3  # PHP 8.0.21 for vendor compatibility
+        ]
+        node_tag: [
+          22
+        ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          ref: v${{ needs.release.outputs.version }}
+
+      - name: Download translations
+        if: needs.crowdin_download.outputs.translations_available == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: translations
+          path: ${{ github.event.repository.name }}/languages/
+
+      - name: Setup environment
+        uses: ./.github/actions/setup
+        with:
+          mariadb_tag: ${{ matrix.mariadb_tag }}
+          wordpress_tag: ${{ matrix.wordpress_tag }}
+          node_tag: ${{ matrix.node_tag }}
+          plugin_name: ${{ github.event.repository.name }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install svn
+        run: sudo apt-get install subversion
+
+      #https://github.com/orgs/community/discussions/25641#discussioncomment-3248571
+      - name: Run Makefile 'deploy' task
+        run: |
+          make deploy \
+            MODE=production \
+            PLUGIN_NAME=${{ github.event.repository.name }} \
+            PLUGIN_VERSION=${{ needs.release.outputs.version }} \
+            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
+            SVN_USERNAME=${{ secrets.SVN_USERNAME }} \
+            SVN_PASSWORD=${{ secrets.SVN_PASSWORD }}
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          # https://github.com/softprops/action-gh-release
+          # Note that if you intend to run workflows on the release event (on: { release: { types: [published] } }),
+          # you need to use a personal access token for this action, as the default secrets.GITHUB_TOKEN does not trigger another workflow.
+          # See: https://github.com/actions/create-release/issues/71
+          token: ${{ secrets.SEMANTIC_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          tag_name: v${{ needs.release.outputs.version }}
+          files: dist/${{ github.event.repository.name }}.zip
+          generate_release_notes: true
+
+      - name: Shutdown environment
+        uses: ./.github/actions/shutdown
+        with:
+          cleanup_mode: basic

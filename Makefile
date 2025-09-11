@@ -1,5 +1,9 @@
 #https://stackoverflow.com/a/44061904/3929620
-.PHONY: all install test deploy setup check set-env wait up install-wordpress test-wordpress deploy-develop deploy-production clean-wordpress down help
+# 1. Minimal approach - direct entry points only
+.PHONY: all setup check up install dev qa deploy changelog down help
+
+# 2. Purist approach - all entry points (technically correct)
+#.PHONY: (all entry points)
 
 include .env
 
@@ -27,9 +31,10 @@ WORDPRESS_SMTP_PORT_NUMBER ?= 1025
 WORDPRESS_SMTP_USER ?=
 WORDPRESS_SMTP_PASSWORD ?=
 WORDPRESS_SMTP_PROTOCOL ?= tls
+WORDPRESS_MTA ?=
 
 NODE_TAG ?= latest
-NODE_PORT ?= 3000
+NODE_PORT ?= 1337
 NODE_ENV ?= develop
 NODE_DEBUG ?=
 NODE_LOG_LEVEL ?=
@@ -60,9 +65,10 @@ PHPSTAN_PRO_WEB_PORT ?=
 
 GITHUB_TOKEN ?=
 
-FRUGAN_UFTYFACF_GOOGLE_OAUTH_CLIENT_ID ?=
-FRUGAN_UFTYFACF_GOOGLE_OAUTH_CLIENT_SECRET ?=
-FRUGAN_UFTYFACF_CACHE_BUSTING_ENABLED ?= false
+WPSPAGHETTI_UFTYFACF_GOOGLE_OAUTH_CLIENT_ID ?=
+WPSPAGHETTI_UFTYFACF_GOOGLE_OAUTH_CLIENT_SECRET ?=
+WPSPAGHETTI_UFTYFACF_SERVER_UPLOAD_ENABLED ?= false
+WPSPAGHETTI_UFTYFACF_VITE_CACHE_BUSTING_ENABLED ?= false
 
 MODE ?= develop
 
@@ -79,29 +85,37 @@ SVN_ASSETS_DIR=.wordpress-org
 
 SVN_AUTH := $(if $(and $(SVN_USERNAME),$(SVN_PASSWORD)),--username $(SVN_USERNAME) --password $(SVN_PASSWORD),)
 
+# Capture composer script argument
+COMPOSER_SCRIPT := $(word 2,$(MAKECMDGOALS))
+COMPOSER_CMD := $(if $(COMPOSER_SCRIPT),composer $(COMPOSER_SCRIPT),composer check)
+
 all: setup up
 
 setup: check .gitconfig docker-compose.override.yml $(TMP_DIR)/certs $(TMP_DIR)/wait-for-it.sh set-env
 
-install: all wait install-wordpress
+install: all wait install-node install-wordpress
 
-test: setup test-wordpress
+dev: setup dev-node
+
+qa: setup qa-node qa-wordpress
 
 deploy: install deploy-zip
-ifeq ($(and $(GITHUB_ACTIONS),$(MODE)),false production)
+ifeq ($(and $(GITHUB_ACTIONS),$(MODE)),true production)
 	deploy-svn
 endif
 
 check:
 	@echo "Checking requirements"
-	@command -v mkcert >/dev/null 2>&1 || { echo >&2 "mkcert is required but not installed. Aborting."; exit 1; }
-	@command -v curl >/dev/null 2>&1 || { echo >&2 "curl is required but not installed. Aborting."; exit 1; }
-	@command -v git >/dev/null 2>&1 || { echo >&2 "git is required but not installed. Aborting."; exit 1; }
-	@command -v rsync >/dev/null 2>&1 || { echo >&2 "rsync is required but not installed. Aborting."; exit 1; }
-	@command -v zip >/dev/null 2>&1 || { echo >&2 "zip is required but not installed. Aborting."; exit 1; }
+	@command -v awk >/dev/null 2>&1 || { echo >&2 "❌ awk is required but not installed. Aborting."; exit 1; }
+	@command -v mkcert >/dev/null 2>&1 || { echo >&2 "❌ mkcert is required but not installed. Aborting."; exit 1; }
+	@command -v curl >/dev/null 2>&1 || { echo >&2 "❌ curl is required but not installed. Aborting."; exit 1; }
+	@command -v git >/dev/null 2>&1 || { echo >&2 "❌ git is required but not installed. Aborting."; exit 1; }
+	@command -v rsync >/dev/null 2>&1 || { echo >&2 "❌ rsync is required but not installed. Aborting."; exit 1; }
+	@command -v zip >/dev/null 2>&1 || { echo >&2 "❌ zip is required but not installed. Aborting."; exit 1; }
 ifeq ($(and $(GITHUB_ACTIONS),$(MODE)),true production)
-	@command -v svn >/dev/null 2>&1 || { echo >&2 "svn is required but not installed. Aborting."; exit 1; }
+	@command -v svn >/dev/null 2>&1 || { echo >&2 "❌ svn is required but not installed. Aborting."; exit 1; }
 endif
+	@echo "✅ All requirements are met"
 
 .gitconfig: 
 	@echo "Setting up .gitconfig"
@@ -117,6 +131,8 @@ $(TMP_DIR)/certs:
 	@mkdir -p $(TMP_DIR)/certs
 	@mkcert -cert-file "$(TMP_DIR)/certs/server.crt" -key-file "$(TMP_DIR)/certs/server.key" localhost 127.0.0.1 ::1 bs-local.com "*.bs-local.com"
 	@chmod +r $(TMP_DIR)/certs/server.*
+	@cp -a $(TMP_DIR)/certs/server.crt $(TMP_DIR)/certs/tls.crt
+	@cp -a $(TMP_DIR)/certs/server.key $(TMP_DIR)/certs/tls.key
 
 $(TMP_DIR)/wait-for-it.sh:
 	@echo "Downloading wait-for-it.sh"
@@ -129,22 +145,19 @@ set-env:
 ifeq ($(PLUGIN_NAME),)
 	@$(eval PLUGIN_NAME := $(shell basename `git rev-parse --show-toplevel`))
 	@if [ -z "$(PLUGIN_NAME)" ]; then \
-		echo "PLUGIN_NAME is not set and could not be determined."; \
+		echo "❌ PLUGIN_NAME is not set and could not be determined."; \
 		exit 1; \
 	fi
 endif
 ifeq ($(PLUGIN_VERSION),)
-	@$(eval PLUGIN_VERSION := $(shell git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//'))
-	@if [ -z "$(PLUGIN_VERSION)" ]; then \
-		echo "No git tags found. Please create a tag before running make."; \
-		exit 1; \
-	fi
+	@$(eval PLUGIN_VERSION := $(shell git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "dev"))
+	@echo "PLUGIN_VERSION set to: $(PLUGIN_VERSION)"
 endif
 
 wait:
 	@echo "Waiting for services to be ready"
-	@$(TMP_DIR)/wait-for-it.sh localhost:80 --timeout=300 --strict -- echo "WordPress is up"
 	@$(TMP_DIR)/wait-for-it.sh localhost:$(NODE_PORT) --timeout=300 --strict -- echo "Node is up"
+	@$(TMP_DIR)/wait-for-it.sh localhost:80 --timeout=300 --strict -- echo "WordPress is up"
 
 	@echo "Waiting for WordPress to complete setup"
 #https://cardinalby.github.io/blog/post/github-actions/implementing-deferred-steps/
@@ -154,18 +167,23 @@ wait:
 #		echo "Waiting for wp-config.php ($$timeout seconds left)..."; \
 #		sleep 5; timeout=$$((timeout - 5)); \
 #	done; \
-#	[ $$timeout -gt 0 ] || { echo "Error: Timeout reached, wp-config.php not found"; exit 1; }'
+#	[ $$timeout -gt 0 ] || { echo "❌ Error: Timeout reached, wp-config.php not found"; exit 1; }'
 
 # method #2
-	@./build/docker/logs-catcher.sh $(WORDPRESS_CONTAINER_NAME) "WordPress setup finished" 300
+	@./docker/logs-catcher.sh $(WORDPRESS_CONTAINER_NAME) "WordPress setup finished" 300
 
 up:
 	@echo "Starting docker compose services"
 	@MARIADB_TAG=${MARIADB_TAG} WORDPRESS_TAG=${WORDPRESS_TAG} NODE_TAG=${NODE_TAG} $(DOCKER_COMPOSE) up -d --build
 
 install-node: clean-node
-	@echo "[node] Installing dependencies"
-	@$(DOCKER_COMPOSE) exec -u$(NODE_CONTAINER_USER) $(NODE_CONTAINER_NAME) sh -c 'cd $(NODE_CONTAINER_WORKSPACE_DIR)/build/front && npm install && npm run develop && npm run production'
+	@echo "[node] Installing dependencies ($(MODE))"
+	@$(DOCKER_COMPOSE) exec -u$(NODE_CONTAINER_USER) $(NODE_CONTAINER_NAME) sh -c 'cd $(NODE_CONTAINER_WORKSPACE_DIR)/$(PLUGIN_NAME) && npm install'
+ifeq ($(MODE),production)
+	@$(DOCKER_COMPOSE) exec -u$(NODE_CONTAINER_USER) $(NODE_CONTAINER_NAME) sh -c 'cd $(NODE_CONTAINER_WORKSPACE_DIR)/$(PLUGIN_NAME) && npm run build:prod'
+else
+	@$(DOCKER_COMPOSE) exec -u$(NODE_CONTAINER_USER) $(NODE_CONTAINER_NAME) sh -c 'cd $(NODE_CONTAINER_WORKSPACE_DIR)/$(PLUGIN_NAME) && npm run build'
+endif
 
 install-wordpress: clean-wordpress
 ifneq ($(GITHUB_TOKEN),)
@@ -182,14 +200,19 @@ endif
 		git config --global --add safe.directory /tmp/$(PLUGIN_NAME)-plugin; \
 	}'
 
+	@echo "[wordpress] Creating mu-plugins directory ($(MODE))"
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'mkdir -p $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/mu-plugins'
+
 	@echo "[wordpress] Creating symbolic links ($(MODE))"
 	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'ln -sfn /tmp/$(PLUGIN_NAME)-plugin $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/plugins/$(PLUGIN_NAME)'
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'ln -sfn /tmp/wonolog.php $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/mu-plugins/wonolog.php'
 	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'ln -sfn /tmp/$(PLUGIN_NAME)-plugin/tests/data/wp-cfm $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/config'
 
 	@echo "[wordpress] Updating wp-config.php ($(MODE))"
-	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c "sed -i '/define('\''FRUGAN_UFTYFACF_GOOGLE_OAUTH_CLIENT_ID'\'',/d' $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-config.php && sed -i '1a define('\''FRUGAN_UFTYFACF_GOOGLE_OAUTH_CLIENT_ID'\'', '\''${FRUGAN_UFTYFACF_GOOGLE_OAUTH_CLIENT_ID}'\'');' $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-config.php"
-	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c "sed -i '/define('\''FRUGAN_UFTYFACF_GOOGLE_OAUTH_CLIENT_SECRET'\'',/d' $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-config.php && sed -i '2a define('\''FRUGAN_UFTYFACF_GOOGLE_OAUTH_CLIENT_SECRET'\'', '\''${FRUGAN_UFTYFACF_GOOGLE_OAUTH_CLIENT_SECRET}'\'');' $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-config.php"
-	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c "sed -i '/define('\''FRUGAN_UFTYFACF_CACHE_BUSTING_ENABLED'\'',/d' $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-config.php && sed -i '3a define('\''FRUGAN_UFTYFACF_CACHE_BUSTING_ENABLED'\'', ${FRUGAN_UFTYFACF_CACHE_BUSTING_ENABLED});' $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-config.php"
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c "sed -i '/define('\''WPSPAGHETTI_UFTYFACF_GOOGLE_OAUTH_CLIENT_ID'\'',/d' $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-config.php && sed -i '1a define('\''WPSPAGHETTI_UFTYFACF_GOOGLE_OAUTH_CLIENT_ID'\'', '\''${WPSPAGHETTI_UFTYFACF_GOOGLE_OAUTH_CLIENT_ID}'\'');' $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-config.php"
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c "sed -i '/define('\''WPSPAGHETTI_UFTYFACF_GOOGLE_OAUTH_CLIENT_SECRET'\'',/d' $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-config.php && sed -i '2a define('\''WPSPAGHETTI_UFTYFACF_GOOGLE_OAUTH_CLIENT_SECRET'\'', '\''${WPSPAGHETTI_UFTYFACF_GOOGLE_OAUTH_CLIENT_SECRET}'\'');' $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-config.php"
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c "sed -i '/define('\''WPSPAGHETTI_UFTYFACF_SERVER_UPLOAD_ENABLED'\'',/d' $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-config.php && sed -i '3a define('\''WPSPAGHETTI_UFTYFACF_SERVER_UPLOAD_ENABLED'\'', ${WPSPAGHETTI_UFTYFACF_SERVER_UPLOAD_ENABLED});' $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-config.php"
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c "sed -i '/define('\''WPSPAGHETTI_UFTYFACF_VITE_CACHE_BUSTING_ENABLED'\'',/d' $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-config.php && sed -i '3a define('\''WPSPAGHETTI_UFTYFACF_VITE_CACHE_BUSTING_ENABLED'\'', ${WPSPAGHETTI_UFTYFACF_VITE_CACHE_BUSTING_ENABLED});' $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-config.php"
 	
 	@echo "[wordpress] Installing dependencies ($(MODE))"
 # PHP 7.x and 8.x interpret composer.json's `extra.installer-paths` differently, perhaps due to different versions of Composer.
@@ -198,6 +221,8 @@ endif
 # Adding Composer's `--working-dir` option with PHP 8.x doesn't work.
 # For this reason, the absolute path `extra.installer-paths` had to be specified in the composer.json.
 ifeq ($(MODE),production)
+# To force a certain version of php you can use:
+# composer config platform.php 8.0 && <composer command> && composer config --unset platform.php
 	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'cd $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/plugins/$(PLUGIN_NAME) && composer install --optimize-autoloader --classmap-authoritative --no-dev --no-interaction'
 else
 	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'cd $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/plugins/$(PLUGIN_NAME) && composer update --optimize-autoloader --no-interaction'
@@ -227,57 +252,99 @@ endif
 	
 	@echo "[wordpress] Changing wp-config.php permissions ($(MODE))"
 	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'chmod 666 $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-config.php'
-	
-#FIXME: nullmailer doesn't stay started
-	@echo "[wordpress] Starting nullmailer ($(MODE))"
-	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'service nullmailer start'
 
-test-node:
+	@echo "[wordpress] Redirecting debug.log to stderr ($(MODE))"
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'rm -f $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/debug.log && ln -sfn /dev/stderr $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/debug.log'
+
+	@echo "[wordpress] Starting MTA daemon ($(MODE))"
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) /usr/local/bin/mta-manager.sh start
+
+dev-node:
+	@echo "[node] Starting development server"
+	@$(DOCKER_COMPOSE) exec -u$(NODE_CONTAINER_USER) $(NODE_CONTAINER_NAME) sh -c 'cd $(NODE_CONTAINER_WORKSPACE_DIR)/$(PLUGIN_NAME) && npm run dev'
+
+qa-node:
 	@echo "[node] Running tests"
-	@$(DOCKER_COMPOSE) exec -u$(NODE_CONTAINER_USER) $(NODE_CONTAINER_NAME) sh -c 'cd $(NODE_CONTAINER_WORKSPACE_DIR)/build/front && npm run test'
+	@$(DOCKER_COMPOSE) exec -u$(NODE_CONTAINER_USER) $(NODE_CONTAINER_NAME) sh -c 'cd $(NODE_CONTAINER_WORKSPACE_DIR)/$(PLUGIN_NAME) && npm run test'
 
-test-wordpress:
+qa-wordpress:
 	@echo "[wordpress] Updating git repository"
 	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'cd $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/plugins/$(PLUGIN_NAME) && git add .'
 	
-	@echo "[wordpress] Running tests"
+	@echo "[wordpress] Running $(if $(COMPOSER_SCRIPT),$(COMPOSER_SCRIPT),check)"
 ifeq ($(GITHUB_ACTIONS),true)
-	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'cd $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/plugins/$(PLUGIN_NAME) && ./vendor/bin/grumphp run --no-interaction'
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'cd $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/plugins/$(PLUGIN_NAME) && composer ci'
 else
-	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'cd $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/plugins/$(PLUGIN_NAME) && ./vendor/bin/grumphp run'
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'cd $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/plugins/$(PLUGIN_NAME) && $(COMPOSER_CMD)'
 endif
 
 deploy-zip:
 	@echo "Deploying to zip file"
 	@mkdir -p $(DIST_DIR)/$(PLUGIN_NAME)
 	@cd $(PLUGIN_NAME) && rsync -av --delete --exclude-from=exclude_from.txt --include-from=include_from.txt . ../$(DIST_DIR)/$(PLUGIN_NAME)/
+
+	@echo "Removing git-updater-lite dependency for WordPress compliance"
+# To force a certain version of php you can use:
+# composer config platform.php 8.0 && <composer command> && composer config --unset platform.php
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'cd /tmp/dist/$(PLUGIN_NAME) && composer remove afragen/git-updater-lite --no-dev --optimize-autoloader --no-interaction'
+
 	@cd $(DIST_DIR)/$(PLUGIN_NAME) && zip -r ../$(PLUGIN_NAME).zip .
 
 deploy-svn:
-	@echo "Deploying to WordPress SVN"
-	@if ! svn ls https://plugins.svn.wordpress.org/$(PLUGIN_NAME)/ >/dev/null 2>&1; then \
-		echo "SVN repository does not exist. Aborting."; \
-		exit 1; \
+	@echo "Checking WordPress SVN repository"
+	@if svn ls https://plugins.svn.wordpress.org/$(PLUGIN_NAME)/ >/dev/null 2>&1; then \
+		echo "SVN repository exists, checking credentials"; \
+		if [ -z "$(SVN_USERNAME)" ] || [ -z "$(SVN_PASSWORD)" ]; then \
+			echo "❌ SVN credentials (SVN_USERNAME and SVN_PASSWORD) are required. Skipping SVN deployment."; \
+		else \
+			echo "Deploying to WordPress SVN"; \
+			svn $(SVN_AUTH) checkout https://plugins.svn.wordpress.org/$(PLUGIN_NAME)/ $(TMP_DIR)/$(SVN_DIR); \
+			CURRENT_BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
+			if [[ "$$CURRENT_BRANCH" != support/* ]]; then \
+				echo "Deploying to trunk and assets"; \
+				rsync -av --delete $(DIST_DIR)/$(PLUGIN_NAME)/ $(TMP_DIR)/$(SVN_DIR)/trunk/; \
+				rsync -av --delete $(SVN_ASSETS_DIR)/ $(TMP_DIR)/$(SVN_DIR)/assets/; \
+			fi; \
+			if [ ! -d "$(TMP_DIR)/$(SVN_DIR)/tags/$(PLUGIN_VERSION)" ]; then \
+				echo "Creating tag v$(PLUGIN_VERSION)"; \
+				mkdir -p $(TMP_DIR)/$(SVN_DIR)/tags/$(PLUGIN_VERSION); \
+				rsync -av --delete $(DIST_DIR)/$(PLUGIN_NAME)/ $(TMP_DIR)/$(SVN_DIR)/tags/$(PLUGIN_VERSION)/; \
+			fi; \
+			echo "Committing to SVN repository"; \
+			cd $(TMP_DIR)/$(SVN_DIR) && svn add --force .; \
+			# Removes files that have been deleted from the project
+			cd $(TMP_DIR)/$(SVN_DIR) && svn status | grep '^!' | awk '{print $$2}' | xargs -r svn delete; \
+			cd $(TMP_DIR)/$(SVN_DIR) && svn $(SVN_AUTH) commit -m "Release version $(PLUGIN_VERSION)"; \
+			rm -rf $(TMP_DIR)/$(SVN_DIR) $(DIST_DIR)/$(PLUGIN_NAME); \
+			echo "✅ SVN deployment completed successfully"; \
+		fi; \
+	else \
+		echo "❌ SVN repository does not exist yet. Skipping SVN deployment."; \
 	fi
-	@svn $(SVN_AUTH) checkout https://plugins.svn.wordpress.org/$(PLUGIN_NAME)/ $(TMP_DIR)/$(SVN_DIR)
-	@CURRENT_BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
-	if [[ "$$CURRENT_BRANCH" != support/* ]]; then \
-		echo "Deploying to trunk and assets"; \
-		rsync -av --delete $(DIST_DIR)/$(PLUGIN_NAME)/ $(TMP_DIR)/$(SVN_DIR)/trunk/; \
-		rsync -av --delete $(SVN_ASSETS_DIR)/ $(TMP_DIR)/$(SVN_DIR)/assets/; \
-	fi	
-	@if [ ! -d "$(TMP_DIR)/$(SVN_DIR)/tags/$(PLUGIN_VERSION)" ]; then \
-		echo "Deploying to tags"; \
-		mkdir -p $(TMP_DIR)/$(SVN_DIR)/tags/$(PLUGIN_VERSION); \
-		rsync -av --delete $(DIST_DIR)/$(PLUGIN_NAME)/ $(TMP_DIR)/$(SVN_DIR)/tags/$(PLUGIN_VERSION)/; \
-	fi
-	@cd $(TMP_DIR)/$(SVN_DIR) && svn add --force * --auto-props --parents --depth infinity -q
-	@cd $(TMP_DIR)/$(SVN_DIR) && svn $(SVN_AUTH) commit -m "release $(PLUGIN_VERSION)"
-	@rm -rf $(TMP_DIR)/$(SVN_DIR) $(DIST_DIR)/$(PLUGIN_NAME)
+
+changelog:
+	@echo "[node] Initializing changelog with historical releases"
+	@$(DOCKER_COMPOSE) exec -u$(NODE_CONTAINER_USER) $(NODE_CONTAINER_NAME) sh -c 'cd $(NODE_CONTAINER_WORKSPACE_DIR) && \
+		if [ ! -f CHANGELOG.md ]; then \
+			echo "CHANGELOG.md not found, generating from git history..."; \
+			mkdir -p /tmp/changelog && cd /tmp/changelog && \
+			npm init -y >/dev/null 2>&1 && \
+			npm install --no-save conventional-changelog-cli >/dev/null 2>&1 && \
+			cd $(NODE_CONTAINER_WORKSPACE_DIR) && \
+			HEADER=$$(node -e "const config = require(\"./.releaserc.json\"); console.log(config.plugins.find(p => p[0] === \"@semantic-release/changelog\")[1].changelogTitle)") && \
+			/tmp/changelog/node_modules/.bin/conventional-changelog -p conventionalcommits -r 0 > /tmp/changelog/body.md && \
+			echo "$$HEADER" > CHANGELOG.md && \
+			echo "" >> CHANGELOG.md && \
+			grep -v "^## \[\]" /tmp/changelog/body.md | awk "/^## / && NR>1 {print \"\"} {print}" >> CHANGELOG.md && \
+			rm -rf /tmp/changelog && \
+			echo "✅ CHANGELOG.md populated with historical releases"; \
+		else \
+			echo "❌ CHANGELOG.md already exists, skipping..."; \
+		fi'
 
 clean-node: 
 	@echo "[node] Cleaning artifacts"
-	@$(DOCKER_COMPOSE) exec -u$(NODE_CONTAINER_USER) $(NODE_CONTAINER_NAME) sh -c 'cd $(NODE_CONTAINER_WORKSPACE_DIR) && rm -rf build/front/node_modules build/front/package-lock.json $(PLUGIN_NAME)/asset'
+	@$(DOCKER_COMPOSE) exec -u$(NODE_CONTAINER_USER) $(NODE_CONTAINER_NAME) sh -c 'cd $(NODE_CONTAINER_WORKSPACE_DIR)/$(PLUGIN_NAME) && rm -rf node_modules package-lock.json assets'
 
 clean-wordpress: 
 	@echo "[wordpress] Cleaning artifacts"
@@ -288,10 +355,61 @@ down:
 	@echo "Stopping docker compose services"
 	@$(DOCKER_COMPOSE) down
 
+mta-start:
+	@echo "[wordpress] Starting MTA daemon ($(MODE))"
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) /usr/local/bin/mta-manager.sh start
+
+mta-stop:
+	@echo "[wordpress] Stopping MTA daemon ($(MODE))"
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) /usr/local/bin/mta-manager.sh stop
+
+mta-status:
+	@echo "[wordpress] Checking MTA status ($(MODE))"
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) /usr/local/bin/mta-manager.sh status
+
+mta-restart:
+	@echo "[wordpress] Restarting MTA daemon ($(MODE))"
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) /usr/local/bin/mta-manager.sh restart
+
+mta-queue:
+	@echo "[wordpress] Checking MTA queue ($(MODE))"
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) /usr/local/bin/mta-manager.sh queue
+
+mta-test:
+	@echo "[wordpress] Testing MTA ($(MODE))"
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) /usr/local/bin/mta-manager.sh test
+
+mta-test-sendmail:
+	@echo "[wordpress] Testing sendmail ($(MODE))"
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) /usr/local/bin/mta-manager.sh test-sendmail
+
 help:
 	@echo "Makefile targets:"
-	@echo "  all           - Start environment"
-	@echo "  install       - Start environment and install dependencies"
-	@echo "  test          - Run tests"
-	@echo "  deploy        - Start environment, install dependencies and deploy to $(MODE)"
-	@echo "  down          - Stop environment"
+	@echo "  all               - Start environment"
+	@echo "  install           - Start environment and install dependencies"
+	@echo "  dev               - Start development server with HMR"
+	@echo "  qa [script]       - Run quality assurance (qa-node + qa-php)"
+	@echo "  deploy            - Start environment, install dependencies and deploy to $(MODE)"
+	@echo "  changelog    	   - Generate CHANGELOG.md with historical releases from git tags
+	@echo "  down              - Stop environment"
+	@echo ""
+	@echo "Quality Assurance:"
+	@echo "  qa                - Run all checks (default: composer check)"
+	@echo "  qa analysis       - Run static analysis (PHPStan, Psalm, etc.)"
+	@echo "  qa lint           - Run code linting (PHP CS Fixer, Rector, etc.)"
+	@echo "  qa security       - Run security checks"
+	@echo "  qa test           - Run unit tests (PHPUnit, etc.)"
+	@echo "  qa test:coverage  - Run unit tests with coverage report"
+	@echo ""
+	@echo "MTA management:"	
+	@echo "  mta-start         - Start MTA daemon"
+	@echo "  mta-stop          - Stop MTA daemon"
+	@echo "  mta-status        - Check MTA status and queue summary"
+	@echo "  mta-restart       - Restart MTA daemon"
+	@echo "  mta-queue         - Show detailed mail queue information"
+	@echo "  mta-test          - Test MTA configuration and send test email"
+	@echo "  mta-test-sendmail - Test sendmail configuration and send test email"
+
+# Prevent make from trying to build targets for additional arguments
+%:
+	@:

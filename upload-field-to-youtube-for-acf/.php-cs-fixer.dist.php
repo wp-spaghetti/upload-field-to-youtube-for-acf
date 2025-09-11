@@ -29,7 +29,7 @@ $header = <<<'EOF'
 // exclude will work only for directories, so if you need to exclude file, try notPath
 $finder = Finder::create()
     ->in([__DIR__])
-    ->exclude(['patch', 'vendor'])
+    ->exclude(['vendor'])
     ->append([__DIR__.'/.php-cs-fixer.dist.php'])
 ;
 
@@ -43,6 +43,8 @@ $config = (new Config())
         '@PHP80Migration' => true,
         '@PHP80Migration:risky' => true,
         'header_comment' => ['header' => $header],
+        // Avoid breaking @psalm-suppress
+        'phpdoc_to_comment' => ['ignored_tags' => ['psalm-suppress']],
     ])
     ->setFinder($finder)
 ;
@@ -57,11 +59,7 @@ if (false !== getenv('FABBOT_IO')) {
             // @phpstan-ignore-next-line
             ->useRuleSet(new RuleSet($config->getRules()))
         ;
-    } catch (InvalidConfigurationException $e) {
-        $config->setRules([]);
-    } catch (UnexpectedValueException $e) {
-        $config->setRules([]);
-    } catch (InvalidArgumentException $e) {
+    } catch (InvalidArgumentException|InvalidConfigurationException|UnexpectedValueException) {
         $config->setRules([]);
     }
 }

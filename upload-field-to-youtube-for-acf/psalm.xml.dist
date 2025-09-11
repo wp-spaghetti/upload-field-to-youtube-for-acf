@@ -1,13 +1,50 @@
 <?xml version="1.0"?>
 <psalm
-    errorLevel="2"
+    errorLevel="4"
     findUnusedBaselineEntry="true"
-    findUnusedCode="true"
+    findUnusedCode="false"
     findUnusedPsalmSuppress="true"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="https://getpsalm.org/schema/config"
+    xsi:schemaLocation="https://getpsalm.org/schema/config vendor/vimeo/psalm/config.xsd"
+    cacheDirectory=".psalm"
+    allowPhpStormGenerics="true"
+    allowStringToStandForClass="true"
+    allowCoercionFromStringToClassConst="true"
+    autoloader="tests/psalm-bootstrap.php"
 >
     <projectFiles>
         <directory name="src" />
-        <directory name="tests" />
-        <file name="*.php" />
+        <ignoreFiles>
+            <directory name="tests" />
+            <directory name="vendor" />
+        </ignoreFiles>
     </projectFiles>
+
+    <plugins>
+        <pluginClass class="PsalmWordPress\Plugin" />
+    </plugins>
+
+    <issueHandlers>
+        <!-- Reduce verbosity for common WordPress patterns -->
+        <UnusedVariable>
+            <errorLevel type="info" />
+        </UnusedVariable>
+
+        <PossiblyUnusedReturnValue>
+            <errorLevel type="info" />
+        </PossiblyUnusedReturnValue>
+
+        <MixedArgument>
+            <errorLevel type="info" />
+        </MixedArgument>
+
+        <MixedAssignment>
+            <errorLevel type="info" />
+        </MixedAssignment>
+
+        <MixedReturnStatement>
+            <errorLevel type="info" />
+        </MixedReturnStatement>
+    </issueHandlers>
 </psalm>

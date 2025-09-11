@@ -2,7 +2,7 @@ services:
 
   mariadb:
     container_name: mariadb
-    image: docker.io/bitnami/mariadb:${MARIADB_TAG:-latest}
+    image: docker.io/frugan/bitnamilegacy-mariadb:${MARIADB_TAG:-latest}
     volumes:
       - mariadb_data:/bitnami/mariadb
     environment:
@@ -15,9 +15,11 @@ services:
     container_name: wordpress
     build:
       context: .
-      dockerfile: build/docker/Dockerfile.wordpress
+      dockerfile: docker/wordpress-package.Dockerfile
+      #dockerfile: docker/wordpress-source.Dockerfile
       args:
         WORDPRESS_TAG: ${WORDPRESS_TAG:-latest}
+        WORDPRESS_MTA: ${WORDPRESS_MTA:-}
         WORDPRESS_SMTP_HOST: ${WORDPRESS_SMTP_HOST:-mailpit}
         WORDPRESS_SMTP_PORT_NUMBER: ${WORDPRESS_SMTP_PORT_NUMBER:-1025}
         WORDPRESS_SMTP_USER: ${WORDPRESS_SMTP_USER:-}
@@ -33,7 +35,9 @@ services:
       - wordpress_data:/bitnami/wordpress:rw
       # `-plugin` suffix avoids conflicts
       - ${PWD}/${PLUGIN_NAME:-upload-field-to-youtube-for-acf}:/tmp/${PLUGIN_NAME:-upload-field-to-youtube-for-acf}-plugin:rw
+      - ${PWD}/docker/wonolog.php:/tmp/wonolog.php:rw
       - ${PWD}/tmp/certs:/certs
+      - ${PWD}/dist:/tmp/dist:rw
       - ${PWD}/tmp/phpstan-fixer:/tmp/phpstan-fixer:rw
     environment:
       ALLOW_EMPTY_PASSWORD: ${WORDPRESS_ALLOW_EMPTY_PASSWORD:-yes}
@@ -50,13 +54,14 @@ services:
       WORDPRESS_SMTP_USER: ${WORDPRESS_SMTP_USER:-}
       WORDPRESS_SMTP_PASSWORD: ${WORDPRESS_SMTP_PASSWORD:-}
       WORDPRESS_SMTP_PROTOCOL: ${WORDPRESS_SMTP_PROTOCOL:-tls}
+      WORDPRESS_MTA: ${WORDPRESS_MTA:-}
       OPENAI_KEY: ${OPENAI_KEY:-}
       PHPSTAN_PRO_WEB_PORT: ${PHPSTAN_PRO_WEB_PORT:-11111}
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
 
   node:
     container_name: node
-    image: docker.io/bitnami/node:${NODE_TAG:-latest}
+    image: docker.io/frugan/bitnamilegacy-node:${NODE_TAG:-latest}
     ports:
       - ${NODE_PORT:-3000}:3000
     volumes:
@@ -66,13 +71,13 @@ services:
     #https://stackoverflow.com/a/52336349/3929620
     tty: true
     environment:
-      NODE_ENV: ${NODE_ENV:-develop}
+      NODE_ENV: ${NODE_ENV:-development}
       DEBUG: ${NODE_DEBUG:-}
       LOG_LEVEL: ${NODE_LOG_LEVEL:-}
 
   phpmyadmin:
     container_name: phpmyadmin
-    image: docker.io/bitnami/phpmyadmin:${PHPMYADMIN_TAG:-latest}
+    image: docker.io/frugan/bitnamilegacy-phpmyadmin:${PHPMYADMIN_TAG:-latest}
     ports:
       - ${PHPMYADMIN_HTTP_PORT:-8080}:8080
       - ${PHPMYADMIN_HTTPS_PORT:-8443}:8443

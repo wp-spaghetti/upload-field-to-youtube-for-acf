@@ -1,30 +1,72 @@
 {
-    "name": "frugan-dev/upload-field-to-youtube-for-acf",
+    "name": "wp-spaghetti/upload-field-to-youtube-for-acf",
     "description": "Upload Field to YouTube for ACF",
     "license": "GPL-3.0-or-later",
     "type": "wordpress-plugin",
+    "keywords": [
+        "wordpress",
+        "acf",
+        "upload",
+        "youtube",
+        "video"
+    ],
+    "authors": [
+        {
+            "name": "Frugan",
+            "email": "dev@frugan.it",
+            "homepage": "https://github.com/frugan-dev",
+            "role": "Developer"
+        }
+    ],
+    "homepage": "https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf",
+    "support": {
+        "issues": "https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/issues",
+        "source": "https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf",
+        "docs": "https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf#readme"
+    },
+    "funding": [
+        {
+            "type": "custom",
+            "url": "https://buymeacoff.ee/frugan"
+        }
+    ],
     "require": {
-        "php": "^8.0",
-        "google/apiclient": "^2.17"
+        "php": ">=8.0",
+        "afragen/git-updater-lite": "^2.3",
+        "google/apiclient": "^2.17",
+        "php-di/php-di": "^7.1",
+        "wp-spaghetti/wp-env": "^2.0",
+        "wp-spaghetti/wp-logger": "^2.0",
+        "wp-spaghetti/wp-vite": "^1.0"
     },
     "require-dev": {
+        "10up/wp_mock": "^0.4.2",
         "composer/installers": "^1.0 || ^2.0",
         "ergebnis/composer-normalize": "^2.42",
-        "friendsofphp/php-cs-fixer": "^3.58",
+        "friendsofphp/php-cs-fixer": "^3.86",
         "hoppinger/advanced-custom-fields-wpcli": "dev-master",
+        "humanmade/psalm-plugin-wordpress": "^3.1",
         "inpsyde/wonolog": "2.x-dev",
         "jameelmoses/wordpress-kint-debugger": "^2.0",
-        "nikic/php-parser": "^5.0",
+        "mockery/mockery": "^1.6",
+        "nikic/php-parser": "^4.0 || ^5.0",
         "php-parallel-lint/php-parallel-lint": "^1.4",
-        "phpro/grumphp-shim": "^2.0",
+        "php-stubs/acf-pro-stubs": "^6.5",
+        "php-stubs/wordpress-stubs": "^6.8",
+        "phpro/grumphp-shim": "^1.0 || ^2.1",
         "phpstan/extension-installer": "^1.4",
-        "phpstan/phpstan": "^1.11",
-        "povils/phpmnd": "^3.5",
-        "rector/rector": "^1.1",
+        "phpstan/phpstan": "^1.12 || ^2.1",
+        "phpstan/phpstan-deprecation-rules": "^1.2",
+        "phpstan/phpstan-mockery": "^1.1",
+        "phpstan/phpstan-phpunit": "^1.4",
+        "phpunit/phpunit": "^9.0 || ^10.0 || ^11.0 || ^12.0",
+        "povils/phpmnd": "^3.6",
+        "rector/rector": "^1.2 || ^2.1",
         "roave/security-advisories": "dev-latest",
-        "squizlabs/php_codesniffer": "^3.10",
+        "squizlabs/php_codesniffer": "^3.13",
         "szepeviktor/phpstan-wordpress": "^1.3",
         "tareq1988/wp-php-cs-fixer": "^1.0",
+        "vimeo/psalm": "^5.26 || ^6.13",
         "wordpress-plugin/acf-repeater": "^2.2",
         "wp-coding-standards/wpcs": "^3.1",
         "wpackagist-plugin/acf-repeater-flexible-content-collapser": "^1.2",
@@ -63,7 +105,12 @@
     ],
     "autoload": {
         "psr-4": {
-            "FruganUFTYFACF\\": "src/"
+            "WpSpaghetti\\UFTYFACF\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "WpSpaghetti\\UFTYFACF\\Tests\\": "tests/"
         }
     },
     "config": {
@@ -74,11 +121,7 @@
             "phpro/grumphp-shim": true,
             "phpstan/extension-installer": true
         },
-        "check-platform-reqs": true,
         "optimize-autoloader": true,
-        "platform": {
-            "php": "8.0"
-        },
         "sort-packages": true
     },
     "extra": {
@@ -93,6 +136,14 @@
         }
     },
     "scripts": {
-        "pre-autoload-dump": "Google\\Task\\Composer::cleanup"
+        "pre-autoload-dump": "Google\\Task\\Composer::cleanup",
+        "analysis": "@check --tasks=phpstan,psalm",
+        "check": "@php -d max_execution_time=0 -d memory_limit=-1 -f ./vendor/bin/grumphp -- run",
+        "ci": "@check --no-interaction",
+        "lint": "@check --tasks=phpcsfixer,phplint,rector",
+        "quality": "@check --tasks=phpmnd,phpparser",
+        "security": "@check --tasks=securitychecker_roave",
+        "test": "@check --tasks=phpunit",
+        "test:coverage": "vendor/bin/phpunit --coverage-clover=coverage.xml"
     }
 }

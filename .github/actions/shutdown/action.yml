@@ -1,0 +1,40 @@
+name: 'Shutdown'
+description: 'Clean up environment and resources'
+
+inputs:
+  cleanup_mode:
+    description: 'Cleanup mode (basic, full, custom)'
+    required: false
+    default: 'basic'
+  custom_command:
+    description: 'Custom cleanup command to run'
+    required: false
+    default: ''
+  working_directory:
+    description: 'Working directory for cleanup operations'
+    required: false
+    default: '.'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Basic shutdown
+      if: inputs.cleanup_mode == 'basic'
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      run: make down
+
+    - name: Full shutdown
+      if: inputs.cleanup_mode == 'full'  
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      run: |
+        make down
+        # Additional cleanup commands can be added here
+        docker system prune -f || true
+
+    - name: Custom shutdown
+      if: inputs.cleanup_mode == 'custom' && inputs.custom_command != ''
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      run: ${{ inputs.custom_command }}

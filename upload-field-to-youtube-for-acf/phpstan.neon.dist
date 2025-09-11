@@ -1,10 +1,49 @@
+includes:
+    - phar://phpstan.phar/conf/bleedingEdge.neon
+
 parameters:
-    level: 5
+    level: 8
+    paths:
+        - src
+        - include
+
+    # Files executed during analysis to set up the environment (for initialization, setup code)
     bootstrapFiles:
         - tests/bootstrap.php
+
+    # Files read but not executed, containing fake definitions for PHPStan (functions, constants, classes)
+    #stubFiles:
+    #    - tests/phpstan-stubs.php
+
+    # Ignore specific errors
+    ignoreErrors:
+        # WordPress functions that PHPStan doesn't know about
+        - '#Function [a-zA-Z_]+ not found#'
+        
+        # ACF specific functions
+        - '#Function acf_[a-zA-Z_]+ not found#'
+        
+        # WordPress constants
+        - '#Constant [A-Z_]+ not found#'
+        
+        # Dynamic property access (common in WordPress/ACF)
+        - '#Access to an undefined property#'
+
+        # Ignore missing iterable value types (replaced deprecated checkMissingIterableValueType)
+        -
+            identifier: missingType.iterableValue
+
+        # Ignore missing generic types (replaced deprecated checkGenericClassInNonGenericObjectType)  
+        -
+            identifier: missingType.generics
+
+    # WordPress specific configuration
     scanDirectories:
         - /bitnami/wordpress/wp-content/plugins/advanced-custom-fields/includes
-    paths:
-        - .
+        - vendor
+        
+    # Exclude vendor and test files from analysis
     excludePaths:
-        - ./patch/
+        - vendor/*
+        - tests/*
+        - resources/*

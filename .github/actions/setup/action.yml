@@ -1,0 +1,107 @@
+name: 'Setup Development Environment'
+description: 'Setup Docker, WordPress and dependencies'
+
+inputs:
+  mariadb_tag:
+    description: 'MariaDB tag'
+    required: false
+    default: 'latest'
+  wordpress_tag:
+    description: 'WordPress tag'  
+    required: false
+    default: 'latest'
+  node_tag:
+    description: 'Node tag'
+    required: false
+    default: '22'
+  plugin_name:
+    description: 'Plugin name'
+    required: true
+  gitHub_token:
+    description: "GitHub Token"
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Docker
+      uses: docker/setup-buildx-action@v1
+
+    - name: Cache Docker layers
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ inputs.mariadb_tag }}-${{ inputs.wordpress_tag }}-${{ inputs.node_tag }}-${{ hashFiles('**/Dockerfile') }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-${{ inputs.mariadb_tag }}-${{ inputs.wordpress_tag }}-${{ inputs.node_tag }}-
+
+    - name: Cache npm modules
+      uses: actions/cache@v4
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ inputs.node_tag }}-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-${{ inputs.node_tag }}-
+
+    - name: Create .env file
+      shell: bash
+      run: cp .env.dist .env
+
+    # method #1
+    - name: Install mkcert
+      shell: bash
+      run: |
+        sudo apt-get update && sudo apt-get install libnss3-tools
+        curl -JLO "https://dl.filippo.io/mkcert/latest?for=linux/amd64"
+        chmod +x mkcert-v*-linux-amd64
+        sudo cp mkcert-v*-linux-amd64 /usr/local/bin/mkcert
+
+    # method #2
+    #- name: Generate self-signed CA
+    #  uses: kofemann/action-create-certificate@v0.0.4
+    #  with:
+    #    hostcert: 'server.crt'
+    #    hostkey: 'server.key'
+    #    cachain: 'ca-chain.pem'
+
+    #- name: Move certificates
+    #  run: |
+    #    mkdir -p tmp/certs
+    #    mv server.crt server.key ca-chain.pem tmp/certs/
+
+    - name: Run Makefile 'all' task
+      shell: bash
+      run: |
+        make \
+          MARIADB_TAG=${{ inputs.mariadb_tag }} \
+          WORDPRESS_TAG=${{ inputs.wordpress_tag }} \
+          NODE_TAG=${{ inputs.node_tag }} \
+          PLUGIN_NAME=${{ inputs.plugin_name }}
+
+    #https://cardinalby.github.io/blog/post/github-actions/implementing-deferred-steps/
+    # method #1
+    #- name: Wait for WordPress setup to complete
+    #  run: |
+    #    timeout=300
+    #    while [ $timeout -gt 0 ]; do
+    #      docker compose exec wordpress test -f /bitnami/wordpress/wp-config.php && break
+    #      echo "Waiting for wp-config.php ($timeout seconds left)..."
+    #      sleep 5
+    #      timeout=$((timeout - 5))
+    #    done
+    #    [ $timeout -gt 0 ] || { echo "Error: Timeout reached, wp-config.php not found"; exit 1; }
+
+    # method #2
+    - name: Wait for WordPress setup to complete
+      shell: bash
+      run: ./docker/logs-catcher.sh wordpress "WordPress setup finished" 180
+
+    - name: Run Makefile 'install' task
+      shell: bash
+      run: |
+        make install \
+          MARIADB_TAG=${{ inputs.mariadb_tag }} \
+          WORDPRESS_TAG=${{ inputs.wordpress_tag }} \
+          NODE_TAG=${{ inputs.node_tag }} \
+          PLUGIN_NAME=${{ inputs.plugin_name }} \
+          GITHUB_TOKEN=${{ inputs.github_token }}
