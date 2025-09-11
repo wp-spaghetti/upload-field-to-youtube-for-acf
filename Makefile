@@ -283,11 +283,15 @@ deploy-zip:
 	@mkdir -p $(DIST_DIR)/$(PLUGIN_NAME)
 	@cd $(PLUGIN_NAME) && rsync -av --delete --exclude-from=exclude_from.txt --include-from=include_from.txt . ../$(DIST_DIR)/$(PLUGIN_NAME)/
 
+	@echo "Creating version WITH Git Updater Lite for Composer installations"
+	@cd $(DIST_DIR)/$(PLUGIN_NAME) && zip -r ../$(PLUGIN_NAME)--with-git-updater.zip .
+
 	@echo "Removing git-updater-lite dependency for WordPress compliance"
 # To force a certain version of php you can use:
 # composer config platform.php 8.0 && <composer command> && composer config --unset platform.php
 	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'cd /tmp/dist/$(PLUGIN_NAME) && composer remove afragen/git-updater-lite --no-dev --optimize-autoloader --no-interaction'
 
+	@echo "Creating standard version WITHOUT Git Updater Lite for WordPress.org"
 	@cd $(DIST_DIR)/$(PLUGIN_NAME) && zip -r ../$(PLUGIN_NAME).zip .
 
 deploy-svn:

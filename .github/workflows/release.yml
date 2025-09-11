@@ -85,7 +85,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'
-          cache: 'npm'
 
       - name: Install Crowdin CLI
         run: npm install -g @crowdin/cli
@@ -186,7 +185,9 @@ jobs:
           # See: https://github.com/actions/create-release/issues/71
           token: ${{ secrets.SEMANTIC_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
           tag_name: v${{ needs.release.outputs.version }}
-          files: dist/${{ github.event.repository.name }}.zip
+          files: |
+            dist/${{ github.event.repository.name }}.zip
+            dist/${{ github.event.repository.name }}--with-git-updater.zip
           generate_release_notes: true
 
       - name: Shutdown environment
