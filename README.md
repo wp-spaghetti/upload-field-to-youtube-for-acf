@@ -40,7 +40,7 @@ To use this plugin, you need to configure Google oAuth credentials so the plugin
 
 ## Installation
 
-You can install the plugin in four ways: manually, via Composer from [WPackagist](https://wpackagist.org), via Composer from [Packagist](https://packagist.org), or via Composer from [GitHub Releases](../../releases).
+You can install the plugin in three ways: manually, via Composer from [WPackagist](https://wpackagist.org), or via Composer from [GitHub Releases](../../releases).
 
 <details>
 <summary>Manual Installation</summary>
@@ -91,46 +91,11 @@ _* `composer/installers` might already be required by another dependency._
 </details>
 
 <details>
-<summary>Installation via Composer from Packagist</summary>
-
-If you use Composer to manage WordPress plugins, you can install it from [Packagist](https://packagist.org):
-
-1. Open your terminal.
-2. Navigate to the root directory of your WordPress installation.
-3. Ensure your `composer.json` file has the following configuration: *
-
-```json
-{
-    "require": {
-        "composer/installers": "^1.0 || ^2.0",
-        "wp-spaghetti/upload-field-to-youtube-for-acf": "^0.4"
-    },
-    "extra": {
-        "installer-paths": {
-            "wp-content/plugins/{$name}/": [
-               "type:wordpress-plugin"
-            ]
-        }
-    }
-}
-```
-4. Run the following command:
-
-```sh
-composer update
-```
-
-<sub><i>
-_Note:_  
-_* `composer/installers` might already be required by another dependency._  
-_* Updates are automatically detected via [Git Updater Lite](https://github.com/afragen/git-updater-lite), not by WordPress._
-</i></sub>
-</details>
-
-<details>
 <summary>Installation via Composer from GitHub Releases</summary>
 
-If you use Composer to manage WordPress plugins, you can install it from this repository directly:
+If you use Composer to manage WordPress plugins, you can install it from this repository directly.
+
+**Standard Version** (uses WordPress update system):
 
 1. Open your terminal.
 2. Navigate to the root directory of your WordPress installation.
@@ -165,6 +130,41 @@ If you use Composer to manage WordPress plugins, you can install it from this re
     }
 }
 ```
+
+**Version with Git Updater** (uses Git Updater Lite for updates):
+
+For installations that need updates managed via Git instead of WordPress.org, use the `--with-git-updater` version:
+
+```json
+{
+    "require": {
+        "composer/installers": "^1.0 || ^2.0",
+        "wp-spaghetti/upload-field-to-youtube-for-acf": "^0.4"
+    },
+    "repositories": [
+        {
+            "type": "package",
+            "package": {
+                "name": "wp-spaghetti/upload-field-to-youtube-for-acf",
+                "version": "0.4.0",
+                "type": "wordpress-plugin",
+                "dist": {
+                    "url": "https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/releases/download/v0.4.0/upload-field-to-youtube-for-acf--with-git-updater.zip",
+                    "type": "zip"
+                }
+            }
+        }
+    ],
+    "extra": {
+        "installer-paths": {
+            "wp-content/plugins/{$name}/": [
+               "type:wordpress-plugin"
+            ]
+        }
+    }
+}
+```
+
 4. Run the following command:
 
 ```sh
@@ -173,7 +173,8 @@ composer update
 
 <sub><i>
 _Note:_  
-_* `composer/installers` might already be required by another dependency._
+_* `composer/installers` might already be required by another dependency._  
+_* The `--with-git-updater` version includes [Git Updater Lite](https://github.com/afragen/git-updater-lite) for automatic updates detection, while the standard version relies on WordPress.org update system._
 </i></sub>
 </details>
 
@@ -270,18 +271,18 @@ define('WPSPAGHETTI_UFTYFACF_LOGGER_DISABLED', true);
 <summary>Bootstrap & Initialization</summary>
 
 ```php
-do_action('upload_field_to_youtube_for_acf_bootstrap_before', $container);
-do_action('upload_field_to_youtube_for_acf_bootstrap_after', $container);
-do_action('upload_field_to_youtube_for_acf_muplugin_loaded');
-do_action('upload_field_to_youtube_for_acf_plugin_loaded');
-do_action('upload_field_to_youtube_for_acf_init_before', $container);
-do_action('upload_field_to_youtube_for_acf_init_after', $container);
-do_action('upload_field_to_youtube_for_acf_init_acf_not_available');
-do_action('upload_field_to_youtube_for_acf_init_mu_plugin_activated');
-do_action('upload_field_to_youtube_for_acf_admin_init_before', $container);
-do_action('upload_field_to_youtube_for_acf_admin_init_after', $container);
-do_action('upload_field_to_youtube_for_acf_admin_init_deactivated_missing_acf');
-do_action('upload_field_to_youtube_for_acf_admin_init_save_settings', $_POST);
+do_action('wpspaghetti_uftyfacf_bootstrap_before', $container);
+do_action('wpspaghetti_uftyfacf_bootstrap_after', $container);
+do_action('wpspaghetti_uftyfacf_muplugin_loaded');
+do_action('wpspaghetti_uftyfacf_plugin_loaded');
+do_action('wpspaghetti_uftyfacf_init_before', $container);
+do_action('wpspaghetti_uftyfacf_init_after', $container);
+do_action('wpspaghetti_uftyfacf_init_acf_not_available');
+do_action('wpspaghetti_uftyfacf_init_mu_plugin_activated');
+do_action('wpspaghetti_uftyfacf_admin_init_before', $container);
+do_action('wpspaghetti_uftyfacf_admin_init_after', $container);
+do_action('wpspaghetti_uftyfacf_admin_init_deactivated_missing_acf');
+do_action('wpspaghetti_uftyfacf_admin_init_save_settings', $_POST);
 ```
 
 </details>
@@ -290,12 +291,12 @@ do_action('upload_field_to_youtube_for_acf_admin_init_save_settings', $_POST);
 <summary>Field Lifecycle</summary>
 
 ```php
-do_action('upload_field_to_youtube_for_acf_activate_before', $instance, $hook, $schedule);
-do_action('upload_field_to_youtube_for_acf_activate_after', $instance, $hook, $schedule, $result);
-do_action('upload_field_to_youtube_for_acf_deactivate_before', $network_deactivating, $instance, $hook);
-do_action('upload_field_to_youtube_for_acf_deactivate_after', $network_deactivating, $instance, $hook, $timestamp);
-do_action('upload_field_to_youtube_for_acf_render_field_before', $field);
-do_action('upload_field_to_youtube_for_acf_render_field_after', $field);
+do_action('wpspaghetti_uftyfacf_activate_before', $instance, $hook, $schedule);
+do_action('wpspaghetti_uftyfacf_activate_after', $instance, $hook, $schedule, $result);
+do_action('wpspaghetti_uftyfacf_deactivate_before', $network_deactivating, $instance, $hook);
+do_action('wpspaghetti_uftyfacf_deactivate_after', $network_deactivating, $instance, $hook, $timestamp);
+do_action('wpspaghetti_uftyfacf_render_field_before', $field);
+do_action('wpspaghetti_uftyfacf_render_field_after', $field);
 ```
 
 </details>
@@ -304,12 +305,12 @@ do_action('upload_field_to_youtube_for_acf_render_field_after', $field);
 <summary>Field Validation & Updates</summary>
 
 ```php
-do_action('upload_field_to_youtube_for_acf_validate_value_before', $valid, $value, $field, $input);
-do_action('upload_field_to_youtube_for_acf_validate_value_after', $valid, $value, $field, $input);
-do_action('upload_field_to_youtube_for_acf_validate_value_error', $exception, $valid, $value, $field, $input);
-do_action('upload_field_to_youtube_for_acf_update_value_before', $value, $post_id, $field);
-do_action('upload_field_to_youtube_for_acf_update_value_after', $value, $post_id, $field, $response);
-do_action('upload_field_to_youtube_for_acf_update_value_error', $exception, $value, $post_id, $field, $response);
+do_action('wpspaghetti_uftyfacf_validate_value_before', $valid, $value, $field, $input);
+do_action('wpspaghetti_uftyfacf_validate_value_after', $valid, $value, $field, $input);
+do_action('wpspaghetti_uftyfacf_validate_value_error', $exception, $valid, $value, $field, $input);
+do_action('wpspaghetti_uftyfacf_update_value_before', $value, $post_id, $field);
+do_action('wpspaghetti_uftyfacf_update_value_after', $value, $post_id, $field, $response);
+do_action('wpspaghetti_uftyfacf_update_value_error', $exception, $value, $post_id, $field, $response);
 ```
 
 </details>
@@ -318,9 +319,9 @@ do_action('upload_field_to_youtube_for_acf_update_value_error', $exception, $val
 <summary>Post Deletion</summary>
 
 ```php
-do_action('upload_field_to_youtube_for_acf_before_delete_post_before', $post_id, $field);
-do_action('upload_field_to_youtube_for_acf_before_delete_post_after', $post_id, $field);
-do_action('upload_field_to_youtube_for_acf_before_delete_post_error', $exception, $post_id, $field);
+do_action('wpspaghetti_uftyfacf_before_delete_post_before', $post_id, $field);
+do_action('wpspaghetti_uftyfacf_before_delete_post_after', $post_id, $field);
+do_action('wpspaghetti_uftyfacf_before_delete_post_error', $exception, $post_id, $field);
 ```
 
 </details>
@@ -329,14 +330,14 @@ do_action('upload_field_to_youtube_for_acf_before_delete_post_error', $exception
 <summary>Settings Page</summary>
 
 ```php
-do_action('upload_field_to_youtube_for_acf_settings_page_before', $oauth, $this);
-do_action('upload_field_to_youtube_for_acf_settings_page_after', $oauth, $this);
-do_action('upload_field_to_youtube_for_acf_settings_page_authorize_before', $oauth, $this);
-do_action('upload_field_to_youtube_for_acf_settings_page_authorize_after', $oauth, $this);
-do_action('upload_field_to_youtube_for_acf_settings_page_authorized_before', $oauth, $this);
-do_action('upload_field_to_youtube_for_acf_settings_page_authorized_after', $oauth, $this);
-do_action('upload_field_to_youtube_for_acf_settings_page_error_before', $oauth, $this);
-do_action('upload_field_to_youtube_for_acf_settings_page_error_after', $oauth, $this);
+do_action('wpspaghetti_uftyfacf_settings_page_before', $oauth, $this);
+do_action('wpspaghetti_uftyfacf_settings_page_after', $oauth, $this);
+do_action('wpspaghetti_uftyfacf_settings_page_authorize_before', $oauth, $this);
+do_action('wpspaghetti_uftyfacf_settings_page_authorize_after', $oauth, $this);
+do_action('wpspaghetti_uftyfacf_settings_page_authorized_before', $oauth, $this);
+do_action('wpspaghetti_uftyfacf_settings_page_authorized_after', $oauth, $this);
+do_action('wpspaghetti_uftyfacf_settings_page_error_before', $oauth, $this);
+do_action('wpspaghetti_uftyfacf_settings_page_error_after', $oauth, $this);
 ```
 
 </details>
@@ -345,21 +346,21 @@ do_action('upload_field_to_youtube_for_acf_settings_page_error_after', $oauth, $
 <summary>AJAX Actions</summary>
 
 ```php
-do_action('upload_field_to_youtube_for_acf_wp_ajax_get_youtube_upload_url_before', $post_id, $field_key, $field);
-do_action('upload_field_to_youtube_for_acf_wp_ajax_get_youtube_upload_url_after', $upload_url, $post_id, $field);
-do_action('upload_field_to_youtube_for_acf_wp_ajax_get_youtube_upload_url_error', $exception, $post_id, $field);
-do_action('upload_field_to_youtube_for_acf_wp_ajax_upload_video_to_youtube_before', $post_id, $field, $uploaded_file);
-do_action('upload_field_to_youtube_for_acf_wp_ajax_upload_video_to_youtube_after', $video_id, $post_id, $field);
-do_action('upload_field_to_youtube_for_acf_wp_ajax_upload_video_to_youtube_error', $exception, $post_id, $field_key);
-do_action('upload_field_to_youtube_for_acf_wp_ajax_get_video_id_from_upload_before', $upload_id, $post_id, $field_key);
-do_action('upload_field_to_youtube_for_acf_wp_ajax_get_video_id_from_upload_after', $video_id, $upload_id, $post_id, $field_key);
-do_action('upload_field_to_youtube_for_acf_wp_ajax_get_video_id_from_upload_error', $exception, $video_id, $upload_id, $post_id, $field_key);
-do_action('upload_field_to_youtube_for_acf_wp_ajax_save_youtube_video_id_before', $post_id, $video_id, $field_key);
-do_action('upload_field_to_youtube_for_acf_wp_ajax_save_youtube_video_id_after', $post_id, $video_id, $field_key);
-do_action('upload_field_to_youtube_for_acf_wp_ajax_save_youtube_video_id_error', $exception, $post_id, $video_id, $field_key);
-do_action('upload_field_to_youtube_for_acf_wp_ajax_get_videos_by_playlist_before', $field_key, $field, $playlist_id);
-do_action('upload_field_to_youtube_for_acf_wp_ajax_get_videos_by_playlist_after', $field_key, $field, $playlist_id, $result);
-do_action('upload_field_to_youtube_for_acf_wp_ajax_get_videos_by_playlist_error', $exception, $field_key, $field, $playlist_id);
+do_action('wpspaghetti_uftyfacf_wp_ajax_get_youtube_upload_url_before', $post_id, $field_key, $field);
+do_action('wpspaghetti_uftyfacf_wp_ajax_get_youtube_upload_url_after', $upload_url, $post_id, $field);
+do_action('wpspaghetti_uftyfacf_wp_ajax_get_youtube_upload_url_error', $exception, $post_id, $field);
+do_action('wpspaghetti_uftyfacf_wp_ajax_upload_video_to_youtube_before', $post_id, $field, $uploaded_file);
+do_action('wpspaghetti_uftyfacf_wp_ajax_upload_video_to_youtube_after', $video_id, $post_id, $field);
+do_action('wpspaghetti_uftyfacf_wp_ajax_upload_video_to_youtube_error', $exception, $post_id, $field_key);
+do_action('wpspaghetti_uftyfacf_wp_ajax_get_video_id_from_upload_before', $upload_id, $post_id, $field_key);
+do_action('wpspaghetti_uftyfacf_wp_ajax_get_video_id_from_upload_after', $video_id, $upload_id, $post_id, $field_key);
+do_action('wpspaghetti_uftyfacf_wp_ajax_get_video_id_from_upload_error', $exception, $video_id, $upload_id, $post_id, $field_key);
+do_action('wpspaghetti_uftyfacf_wp_ajax_save_youtube_video_id_before', $post_id, $video_id, $field_key);
+do_action('wpspaghetti_uftyfacf_wp_ajax_save_youtube_video_id_after', $post_id, $video_id, $field_key);
+do_action('wpspaghetti_uftyfacf_wp_ajax_save_youtube_video_id_error', $exception, $post_id, $video_id, $field_key);
+do_action('wpspaghetti_uftyfacf_wp_ajax_get_videos_by_playlist_before', $field_key, $field, $playlist_id);
+do_action('wpspaghetti_uftyfacf_wp_ajax_get_videos_by_playlist_after', $field_key, $field, $playlist_id, $result);
+do_action('wpspaghetti_uftyfacf_wp_ajax_get_videos_by_playlist_error', $exception, $field_key, $field, $playlist_id);
 ```
 
 </details>
@@ -368,19 +369,19 @@ do_action('upload_field_to_youtube_for_acf_wp_ajax_get_videos_by_playlist_error'
 <summary>YouTube API Operations</summary>
 
 ```php
-do_action('upload_field_to_youtube_for_acf_get_playlists_by_privacy_status_before', $privacy_status);
-do_action('upload_field_to_youtube_for_acf_get_playlists_by_privacy_status_after', $privacy_status, $result);
-do_action('upload_field_to_youtube_for_acf_get_playlists_by_privacy_status_error', $exception, $privacy_status);
-do_action('upload_field_to_youtube_for_acf_get_youtube_upload_url_before', $post_id, $field);
-do_action('upload_field_to_youtube_for_acf_get_youtube_upload_url_after', $upload_url, $post_id, $field);
-do_action('upload_field_to_youtube_for_acf_upload_video_to_youtube_before', $post_id, $field, $file_data);
-do_action('upload_field_to_youtube_for_acf_upload_video_to_youtube_after', $video_id, $post_id, $field);
-do_action('upload_field_to_youtube_for_acf_get_video_id_from_upload_before', $upload_id);
-do_action('upload_field_to_youtube_for_acf_get_video_id_from_upload_after', $video_id, $upload_id);
-do_action('upload_field_to_youtube_for_acf_get_videos_by_playlist_before', $playlist_id, $privacy_status);
-do_action('upload_field_to_youtube_for_acf_get_videos_by_playlist_after', $playlist_id, $privacy_status, $response, $result);
-do_action('upload_field_to_youtube_for_acf_create_resumable_upload_request_before', $post_id, $field);
-do_action('upload_field_to_youtube_for_acf_create_resumable_upload_request_after', $request_data, $post_id, $field);
+do_action('wpspaghetti_uftyfacf_get_playlists_by_privacy_status_before', $privacy_status);
+do_action('wpspaghetti_uftyfacf_get_playlists_by_privacy_status_after', $privacy_status, $result);
+do_action('wpspaghetti_uftyfacf_get_playlists_by_privacy_status_error', $exception, $privacy_status);
+do_action('wpspaghetti_uftyfacf_get_youtube_upload_url_before', $post_id, $field);
+do_action('wpspaghetti_uftyfacf_get_youtube_upload_url_after', $upload_url, $post_id, $field);
+do_action('wpspaghetti_uftyfacf_upload_video_to_youtube_before', $post_id, $field, $file_data);
+do_action('wpspaghetti_uftyfacf_upload_video_to_youtube_after', $video_id, $post_id, $field);
+do_action('wpspaghetti_uftyfacf_get_video_id_from_upload_before', $upload_id);
+do_action('wpspaghetti_uftyfacf_get_video_id_from_upload_after', $video_id, $upload_id);
+do_action('wpspaghetti_uftyfacf_get_videos_by_playlist_before', $playlist_id, $privacy_status);
+do_action('wpspaghetti_uftyfacf_get_videos_by_playlist_after', $playlist_id, $privacy_status, $response, $result);
+do_action('wpspaghetti_uftyfacf_create_resumable_upload_request_before', $post_id, $field);
+do_action('wpspaghetti_uftyfacf_create_resumable_upload_request_after', $request_data, $post_id, $field);
 ```
 
 </details>
@@ -389,7 +390,7 @@ do_action('upload_field_to_youtube_for_acf_create_resumable_upload_request_after
 <summary>Google Client & Authentication</summary>
 
 ```php
-do_action('upload_field_to_youtube_for_acf_set_google_client_after', $this->client);
+do_action('wpspaghetti_uftyfacf_set_google_client_after', $this->client);
 ```
 
 </details>
@@ -398,19 +399,19 @@ do_action('upload_field_to_youtube_for_acf_set_google_client_after', $this->clie
 <summary>Cache Management</summary>
 
 ```php
-do_action('upload_field_to_youtube_for_acf_get_access_token_before', $cache_info);
-do_action('upload_field_to_youtube_for_acf_get_access_token_after', $token, $cache_info);
-do_action('upload_field_to_youtube_for_acf_save_access_token_before', $token);
-do_action('upload_field_to_youtube_for_acf_save_access_token_after', $token, $cache_info);
-do_action('upload_field_to_youtube_for_acf_save_access_token_error', $token, $cache_info);
-do_action('upload_field_to_youtube_for_acf_save_access_token_invalid_token_format', $token);
-do_action('upload_field_to_youtube_for_acf_delete_access_token_before', $cache_info);
-do_action('upload_field_to_youtube_for_acf_delete_access_token_after', $cache_info);
-do_action('upload_field_to_youtube_for_acf_cache_info_after', $cache_info);
-do_action('upload_field_to_youtube_for_acf_clear_all_caches_before');
-do_action('upload_field_to_youtube_for_acf_clear_all_caches_after', $cache_clear_methods);
-do_action('upload_field_to_youtube_for_acf_aggressive_cache_clear_before');
-do_action('upload_field_to_youtube_for_acf_aggressive_cache_clear_after');
+do_action('wpspaghetti_uftyfacf_get_access_token_before', $cache_info);
+do_action('wpspaghetti_uftyfacf_get_access_token_after', $token, $cache_info);
+do_action('wpspaghetti_uftyfacf_save_access_token_before', $token);
+do_action('wpspaghetti_uftyfacf_save_access_token_after', $token, $cache_info);
+do_action('wpspaghetti_uftyfacf_save_access_token_error', $token, $cache_info);
+do_action('wpspaghetti_uftyfacf_save_access_token_invalid_token_format', $token);
+do_action('wpspaghetti_uftyfacf_delete_access_token_before', $cache_info);
+do_action('wpspaghetti_uftyfacf_delete_access_token_after', $cache_info);
+do_action('wpspaghetti_uftyfacf_cache_info_after', $cache_info);
+do_action('wpspaghetti_uftyfacf_clear_all_caches_before');
+do_action('wpspaghetti_uftyfacf_clear_all_caches_after', $cache_clear_methods);
+do_action('wpspaghetti_uftyfacf_aggressive_cache_clear_before');
+do_action('wpspaghetti_uftyfacf_aggressive_cache_clear_after');
 ```
 
 </details>
@@ -419,15 +420,15 @@ do_action('upload_field_to_youtube_for_acf_aggressive_cache_clear_after');
 <summary>Logging</summary>
 
 ```php
-do_action('upload_field_to_youtube_for_acf_log', $level, $message, $context);
-do_action('upload_field_to_youtube_for_acf_log_emergency', $message, $context);
-do_action('upload_field_to_youtube_for_acf_log_alert', $message, $context);
-do_action('upload_field_to_youtube_for_acf_log_critical', $message, $context);
-do_action('upload_field_to_youtube_for_acf_log_error', $message, $context);
-do_action('upload_field_to_youtube_for_acf_log_warning', $message, $context);
-do_action('upload_field_to_youtube_for_acf_log_notice', $message, $context);
-do_action('upload_field_to_youtube_for_acf_log_info', $message, $context);
-do_action('upload_field_to_youtube_for_acf_log_debug', $message, $context);
+do_action('wpspaghetti_uftyfacf_log', $level, $message, $context);
+do_action('wpspaghetti_uftyfacf_log_emergency', $message, $context);
+do_action('wpspaghetti_uftyfacf_log_alert', $message, $context);
+do_action('wpspaghetti_uftyfacf_log_critical', $message, $context);
+do_action('wpspaghetti_uftyfacf_log_error', $message, $context);
+do_action('wpspaghetti_uftyfacf_log_warning', $message, $context);
+do_action('wpspaghetti_uftyfacf_log_notice', $message, $context);
+do_action('wpspaghetti_uftyfacf_log_info', $message, $context);
+do_action('wpspaghetti_uftyfacf_log_debug', $message, $context);
 ```
 
 </details>
@@ -436,8 +437,8 @@ do_action('upload_field_to_youtube_for_acf_log_debug', $message, $context);
 <summary>Utility Actions</summary>
 
 ```php
-do_action('upload_field_to_youtube_for_acf_save_video_id_to_field_before', $post_id, $video_id, $field_key);
-do_action('upload_field_to_youtube_for_acf_save_video_id_to_field_after', $post_id, $video_id, $field_key);
+do_action('wpspaghetti_uftyfacf_save_video_id_to_field_before', $post_id, $video_id, $field_key);
+do_action('wpspaghetti_uftyfacf_save_video_id_to_field_after', $post_id, $video_id, $field_key);
 ```
 
 </details>
@@ -446,7 +447,7 @@ do_action('upload_field_to_youtube_for_acf_save_video_id_to_field_after', $post_
 <summary>Cron Hook</summary>
 
 ```php
-do_action('upload_field_to_youtube_for_acf__check_oauth_token');
+do_action('wpspaghetti_uftyfacf__check_oauth_token');
 ```
 
 </details>
@@ -457,10 +458,10 @@ do_action('upload_field_to_youtube_for_acf__check_oauth_token');
 <summary>Configuration Filters</summary>
 
 ```php
-apply_filters('upload_field_to_youtube_for_acf_field_defaults', $defaults);
-apply_filters('upload_field_to_youtube_for_acf_env_settings', $settings);
-apply_filters('upload_field_to_youtube_for_acf_allowed_video_mime_types', $mime_types);
-apply_filters('upload_field_to_youtube_for_acf_container_definitions', $definitions);
+apply_filters('wpspaghetti_uftyfacf_field_defaults', $defaults);
+apply_filters('wpspaghetti_uftyfacf_env_settings', $settings);
+apply_filters('wpspaghetti_uftyfacf_allowed_video_mime_types', $mime_types);
+apply_filters('wpspaghetti_uftyfacf_container_definitions', $definitions);
 ```
 
 </details>
@@ -469,8 +470,8 @@ apply_filters('upload_field_to_youtube_for_acf_container_definitions', $definiti
 <summary>Field Instance & Rendering</summary>
 
 ```php
-apply_filters('upload_field_to_youtube_for_acf_field_instance', $this->container->get(Field::class));
-apply_filters('upload_field_to_youtube_for_acf_render_field_field', $field);
+apply_filters('wpspaghetti_uftyfacf_field_instance', $this->container->get(Field::class));
+apply_filters('wpspaghetti_uftyfacf_render_field_field', $field);
 ```
 
 </details>
@@ -479,9 +480,9 @@ apply_filters('upload_field_to_youtube_for_acf_render_field_field', $field);
 <summary>Google Client Configuration</summary>
 
 ```php
-apply_filters('upload_field_to_youtube_for_acf_set_google_client_data', $data);
-apply_filters('upload_field_to_youtube_for_acf_set_google_client_scopes', $scopes);
-apply_filters('upload_field_to_youtube_for_acf_set_google_client_client', $this->client);
+apply_filters('wpspaghetti_uftyfacf_set_google_client_data', $data);
+apply_filters('wpspaghetti_uftyfacf_set_google_client_scopes', $scopes);
+apply_filters('wpspaghetti_uftyfacf_set_google_client_client', $this->client);
 ```
 
 </details>
@@ -490,10 +491,10 @@ apply_filters('upload_field_to_youtube_for_acf_set_google_client_client', $this-
 <summary>Field Validation & Updates</summary>
 
 ```php
-apply_filters('upload_field_to_youtube_for_acf_validate_value_should_update', $should_update, $value, $field, $input, $post_id);
-apply_filters('upload_field_to_youtube_for_acf_update_value_should_update', $should_update, $value, $post_id, $field);
-apply_filters('upload_field_to_youtube_for_acf_update_value_data', $data, $value, $post_id, $field);
-apply_filters('upload_field_to_youtube_for_acf_before_delete_post_should_delete', $field['api_delete_on_post_delete'], $post_id, $field);
+apply_filters('wpspaghetti_uftyfacf_validate_value_should_update', $should_update, $value, $field, $input, $post_id);
+apply_filters('wpspaghetti_uftyfacf_update_value_should_update', $should_update, $value, $post_id, $field);
+apply_filters('wpspaghetti_uftyfacf_update_value_data', $data, $value, $post_id, $field);
+apply_filters('wpspaghetti_uftyfacf_before_delete_post_should_delete', $field['api_delete_on_post_delete'], $post_id, $field);
 ```
 
 </details>
@@ -502,7 +503,7 @@ apply_filters('upload_field_to_youtube_for_acf_before_delete_post_should_delete'
 <summary>AJAX Field Retrieval</summary>
 
 ```php
-apply_filters('upload_field_to_youtube_for_acf_wp_ajax_get_youtube_upload_url_field', get_field_object($field_key));
+apply_filters('wpspaghetti_uftyfacf_wp_ajax_get_youtube_upload_url_field', get_field_object($field_key));
 ```
 
 </details>
@@ -511,8 +512,8 @@ apply_filters('upload_field_to_youtube_for_acf_wp_ajax_get_youtube_upload_url_fi
 <summary>Cron Configuration</summary>
 
 ```php
-apply_filters('upload_field_to_youtube_for_acf_get_cron_schedule_cron_schedule', $this->env['cron_schedule']);
-apply_filters('upload_field_to_youtube_for_acf_get_cron_status_status', $status);
+apply_filters('wpspaghetti_uftyfacf_get_cron_schedule_cron_schedule', $this->env['cron_schedule']);
+apply_filters('wpspaghetti_uftyfacf_get_cron_status_status', $status);
 ```
 
 </details>
@@ -521,10 +522,10 @@ apply_filters('upload_field_to_youtube_for_acf_get_cron_status_status', $status)
 <summary>Cache Management</summary>
 
 ```php
-apply_filters('upload_field_to_youtube_for_acf_cache_info', $cache_info);
-apply_filters('upload_field_to_youtube_for_acf_cache_clear_methods', $cache_clear_methods);
-apply_filters('upload_field_to_youtube_for_acf_get_access_token_token', $token, $cache_info);
-apply_filters('upload_field_to_youtube_for_acf_save_access_token_token', $token);
+apply_filters('wpspaghetti_uftyfacf_cache_info', $cache_info);
+apply_filters('wpspaghetti_uftyfacf_cache_clear_methods', $cache_clear_methods);
+apply_filters('wpspaghetti_uftyfacf_get_access_token_token', $token, $cache_info);
+apply_filters('wpspaghetti_uftyfacf_save_access_token_token', $token);
 ```
 
 </details>
@@ -533,8 +534,8 @@ apply_filters('upload_field_to_youtube_for_acf_save_access_token_token', $token)
 <summary>Logging Configuration</summary>
 
 ```php
-apply_filters('upload_field_to_youtube_for_acf_wonolog_namespace', 'Inpsyde\Wonolog');
-apply_filters('upload_field_to_youtube_for_acf_wonolog_prefix', $wonolog_prefix, $level, $message, $context);
+apply_filters('wpspaghetti_uftyfacf_wonolog_namespace', 'Inpsyde\Wonolog');
+apply_filters('wpspaghetti_uftyfacf_wonolog_prefix', $wonolog_prefix, $level, $message, $context);
 ```
 
 </details>
