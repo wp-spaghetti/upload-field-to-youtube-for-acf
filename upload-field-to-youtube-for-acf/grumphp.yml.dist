@@ -3,24 +3,44 @@ grumphp:
     #fixer:
     #    fix_by_default: true
     tasks:
+        # Composer validation - check composer.json syntax and dependencies
         composer: ~
 
+        # Composer normalize - standardize composer.json format
         composer_normalize: ~
 
-        #phpcs:
-        #    standard: ['WordPress']
-        #    ignore_patterns:
-        #        - /^vendor\/(.*)/
+        # File size check - prevent overly large files
+        file_size:
+            ignore_patterns:
+                - 'node_modules'
+                - 'tests'
+                - 'vendor'
+                - '*.lock'
 
+        # Git commit message validation
+        git_commit_message:
+            enforce_capitalized_subject: false
+            matchers:
+                Must be formatted according to Conventional Commits: /^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?\!?:\s.{1,}$/
+
+        # JSON validation
+        jsonlint:
+            ignore_patterns: ['vendor']
+            detect_key_conflicts: true
+
+        # PHP CS Fixer
         phpcsfixer:
             config: .php-cs-fixer.dist.php
 
+        # PHP Lint
         phplint:
             exclude: ['vendor']
 
+        # PHP Magic Number Detector
         phpmnd:
-            exclude_path: ['vendor']
+            exclude_path: ['tests', 'vendor']
 
+        # PHP Parser
         phpparser:
             ignore_patterns: ['vendor']
             visitors:
@@ -31,19 +51,38 @@ grumphp:
                         - 'print_r'
                 #no_exit_statements: ~
 
+        # PHPStan - Static Analysis
         phpstan:
             configuration: ./phpstan.neon.dist
             memory_limit: '-1'
+            ignore_patterns:
+                - 'node_modules'
+                - 'tests'
+                - 'vendor'
 
+        # PHPUnit - Tests
+        phpunit: ~
+
+        # PHP Version Check
         #https://www.php.net/supported-versions.php
-        phpversion:
-            project: '8.0'
+        # Commented out to support PHP 8.0+ for broader WordPress plugin compatibility
+        # Uncomment and adjust version if you want to enforce a specific PHP version
+        #phpversion:
+        #    project: '8.0'
 
-        #psalm:
-        #    config: psalm.xml.dist
-        #    show_info: true
+        # Psalm - Additional Static Analysis
+        psalm:
+            config: psalm.xml.dist
+            ignore_patterns: ['tests', 'vendor']
+            threads: 4     
 
+        # Rector - Automated Refactoring
         rector: ~
 
+        # Security Checker
         securitychecker_roave:
             run_always: true
+
+        # YAML validation
+        yamllint:
+            ignore_patterns: ['node_modules', 'vendor']
