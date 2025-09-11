@@ -1,0 +1,15 @@
+"project_id_env": "CROWDIN_PROJECT_ID"
+"api_token_env": "CROWDIN_PERSONAL_TOKEN"
+"base_path": "."
+
+"preserve_hierarchy": true
+
+# https://support.crowdin.com/developer/configuration-file/#placeholders
+# You can also define the path for files in the resulting archive by putting a slash (/) at the beginning of the pattern.
+"files": [
+  {
+    "source" : "languages/*.pot",
+    # @see Crowdin.com > {project} > Sources > {file} > Settings > Resulting file after translation export
+    "translation" : "languages/%locale_with_underscore%.po"
+  }
+]

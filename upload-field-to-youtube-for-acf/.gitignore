@@ -1,4 +1,7 @@
-#asset/
+.phpunit.cache/
+.psalm/
+assets/
+composer.develop.*
 
 grumphp.yml
 !grumphp.yml.dist
@@ -8,6 +11,8 @@ grumphp.yml
 
 .phpstan.neon
 !phpstan.neon.dist
+
+package-lock.json
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/git,composer

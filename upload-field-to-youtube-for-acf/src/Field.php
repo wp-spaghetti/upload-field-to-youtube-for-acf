@@ -11,57 +11,64 @@ declare(strict_types=1);
  * with this source code in the file LICENSE.
  */
 
-namespace FruganUFTYFACF;
+namespace WpSpaghetti\UFTYFACF;
 
-use Google\Client;
-use Google\Service\Oauth2;
-use Google\Service\YouTube;
-use Inpsyde\Wonolog\Configurator;
+use DI\Container;
+use WpSpaghetti\UFTYFACF\Service\CacheHandler;
+use WpSpaghetti\UFTYFACF\Service\GoogleClientManager;
+use WpSpaghetti\UFTYFACF\Service\YoutubeApiService;
+use WpSpaghetti\UFTYFACF\Trait\BaseHookTrait;
+use WpSpaghetti\WpEnv\Environment;
+use WpSpaghetti\WpLogger\Logger;
+use WpSpaghetti\WpVite\Vite;
 
 if (!\defined('ABSPATH')) {
     exit;
 }
 
 /**
- * Class Field.
+ * Class Field - ACF field type class.
  */
 class Field extends \acf_field
 {
+    use BaseHookTrait;
+
     /**
      * Field type title.
      */
     public string $title;
 
     /**
-     * Controls field type visibilty in REST requests.
-     *
-     * @var bool
-     */
-    public $show_in_rest = true;
-
-    /**
      * Environment values relating to the theme or plugin.
      *
-     * @var array plugin or theme context such as 'url' and 'version'
+     * @var array<string, mixed> plugin or theme context such as 'url' and 'version'
      */
     private array $env;
 
-    private ?Client $client = null;
-
-    private null|array|bool $access_token = null;
-
     /**
-     * Constructor.
+     * Constructor with dependency injection.
      */
-    public function __construct()
-    {
+    public function __construct(
+        private Container $container,
+        private GoogleClientManager $google_client_manager,
+        private YoutubeApiService $youtube_api_service,
+        private CacheHandler $cache_handler,
+        private Logger $logger
+    ) {
+        $this->init_hook($container);
+
         /*
          * Field type reference used in PHP and JS code.
          *
          * No spaces. Underscores allowed.
          */
-        $this->name = FRUGAN_UFTYFACF_NAME_UNDERSCORE;
+        $this->name = $this->container->get('plugin_undername'); // Single words, no spaces, underscores allowed
 
+        /*
+         * Field type title.
+         *
+         * For admin-facing UI. May contain spaces.
+         */
         $this->title = __('Upload Field to YouTube for ACF', 'upload-field-to-youtube-for-acf');
 
         /*
@@ -71,8 +78,11 @@ class Field extends \acf_field
          */
         $this->label = __('YouTube Uploader', 'upload-field-to-youtube-for-acf');
 
-        // The category the field appears within in the field type picker.
-        $this->category = 'content'; // basic | content | choice | relational | jquery | layout | CUSTOM GROUP NAME
+        /*
+         * The category the field appears within in the field type picker.
+         * Basic: basic | content | choice | relational | jquery | layout | CUSTOM GROUP NAME
+         */
+        $this->category = 'content';
 
         /*
          * Field type Description.
@@ -86,26 +96,17 @@ class Field extends \acf_field
          *
          * For linking to a documentation page. Displayed in the field picker modal.
          */
-        $this->doc_url = 'https://github.com/frugan-dev/upload-field-to-youtube-for-acf';
+        $this->doc_url = 'https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf';
 
         /*
          * Field type Tutorial URL.
          *
          * For linking to a tutorial resource. Displayed in the field picker modal.
          */
-        $this->tutorial_url = 'https://github.com/frugan-dev/upload-field-to-youtube-for-acf';
+        $this->tutorial_url = 'https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf';
 
         // Defaults for your custom user-facing settings for this field type.
-        $this->defaults = [
-            'category_id' => 22, // People & Blogs
-            'tags' => !empty($_SERVER['HTTP_HOST']) ? str_replace('www.', '', wp_unslash($_SERVER['HTTP_HOST'])) : '',
-            'privacy_status' => 'unlisted',
-            'made_for_kids' => false,
-            'allow_upload' => true,
-            'allow_select' => true,
-            'api_update_on_post_update' => true,
-            'api_delete_on_post_delete' => false,
-        ];
+        $this->defaults = $this->container->get('field_defaults');
 
         /*
          * Strings used in JavaScript code.
@@ -117,34 +118,55 @@ class Field extends \acf_field
          * ```
          */
         $this->l10n = [
+            'attention' => '⚠️ '.__('Attention', 'upload-field-to-youtube-for-acf'),
             'before_uploading' => __('Before uploading your video, make sure you:', 'upload-field-to-youtube-for-acf'),
-            // translators: %s: Title
-            'enter_title' => \sprintf(__('Enter a "%1$s"', 'upload-field-to-youtube-for-acf'), __('Title', 'upload-field-to-youtube-for-acf')),
+            'confirm_video_id' => __('Confirm Video ID', 'upload-field-to-youtube-for-acf'),
+            'do_not_save_before_entering_id' => __('Do NOT save the post until you have entered the Video ID, otherwise the video will not be associated with this post', 'upload-field-to-youtube-for-acf'),
             // translators: %s: Description
-            'enter_description' => \sprintf(__('Enter a "%1$s"', 'upload-field-to-youtube-for-acf'), __('Description', 'upload-field-to-youtube-for-acf')),
-            // translators: %s: Video file
-            'select_video_file' => \sprintf(__('Select a "%1$s"', 'upload-field-to-youtube-for-acf'), __('Video file', 'upload-field-to-youtube-for-acf')),
-            'preparing_upload' => __('Preparing to upload your file', 'upload-field-to-youtube-for-acf'),
-            'loading' => __('Loading', 'upload-field-to-youtube-for-acf'),
-            'wait_please' => __('Wait please', 'upload-field-to-youtube-for-acf'),
-            'video_uploaded_successfully' => __('Video uploaded successfully.', 'upload-field-to-youtube-for-acf'),
-            'error_while_uploading' => __('Error while uploading.', 'upload-field-to-youtube-for-acf'),
-            'network_error_while_uploading' => __('Network error while uploading.', 'upload-field-to-youtube-for-acf'),
+            'enter_description' => \sprintf(__('Enter a "%s"', 'upload-field-to-youtube-for-acf'), __('Description', 'upload-field-to-youtube-for-acf')),
+            // translators: %s: Title
+            'enter_title' => \sprintf(__('Enter a "%s"', 'upload-field-to-youtube-for-acf'), __('Title', 'upload-field-to-youtube-for-acf')),
+            'enter_video_id_manually' => __('Enter Video ID manually', 'upload-field-to-youtube-for-acf'),
+            'error_while_uploading' => __('Error while uploading', 'upload-field-to-youtube-for-acf'),
             'following_error' => __('The following error occurred:', 'upload-field-to-youtube-for-acf'),
-            'recommended_save_post' => __('It is recommended to save the post by clicking the "Publish" button.', 'upload-field-to-youtube-for-acf'),
-            'attention' => __('Attention', 'upload-field-to-youtube-for-acf'),
-            'technical_problem' => __('There was a technical problem, please try again later.', 'upload-field-to-youtube-for-acf'),
+            'loading' => __('Loading', 'upload-field-to-youtube-for-acf'),
+            'manual_video_id_instructions' => __('You can find the Video ID in your YouTube Studio. Go to your channel, find the uploaded video, and copy the 11-character ID from the URL or video details', 'upload-field-to-youtube-for-acf'),
+            'network_error' => __('Network error', 'upload-field-to-youtube-for-acf'),
+            'network_error_while_uploading' => __('Network error while uploading', 'upload-field-to-youtube-for-acf'),
+            'now_safe_to_save_post' => __('You can now safely save the post. The video is properly associated', 'upload-field-to-youtube-for-acf'),
+            'parse_error' => __('Parse error', 'upload-field-to-youtube-for-acf'),
+            'please_enter_valid_video_id' => __('Please enter a valid Video ID', 'upload-field-to-youtube-for-acf'),
+            'preparing_upload' => __('Preparing to upload your file', 'upload-field-to-youtube-for-acf'),
+            'recommended_save_post' => __('It is recommended to save the post by clicking the "Publish" button', 'upload-field-to-youtube-for-acf'),
             'select' => __('select', 'upload-field-to-youtube-for-acf'),
+            // translators: %s: Video file
+            'select_video_file' => \sprintf(__('Select a "%s"', 'upload-field-to-youtube-for-acf'), __('Video file', 'upload-field-to-youtube-for-acf')),
+            'status_error' => __('Status error', 'upload-field-to-youtube-for-acf'),
+            'technical_problem' => __('There was a technical problem, please try again later', 'upload-field-to-youtube-for-acf'),
+            'upload_aborted' => __('Upload aborted', 'upload-field-to-youtube-for-acf'),
+            'upload_completed_successfully' => __('Upload completed successfully', 'upload-field-to-youtube-for-acf'),
+            'upload_failed' => __('Upload failed', 'upload-field-to-youtube-for-acf'),
+            'upload_successful_id_needed' => __('Video uploaded - Manual ID entry required', 'upload-field-to-youtube-for-acf'),
+            'verifying' => __('Verifying', 'upload-field-to-youtube-for-acf'),
+            'video_associated_successfully' => __('Video successfully associated with this post', 'upload-field-to-youtube-for-acf'),
+            'video_id' => __('Video ID', 'upload-field-to-youtube-for-acf'),
+            // translators: %s: example video ID in bold tags
+            'video_id_help_text_part1' => \sprintf(__('The Video ID is an 11-character string like: %s', 'upload-field-to-youtube-for-acf'), '<strong>dQw4w9WgXcQ</strong>'),
+            'video_id_help_text_part2' => __('You can find it in YouTube Studio or in the video URL after "v=" or "youtu.be/"', 'upload-field-to-youtube-for-acf'),
+            // translators: %s: example video ID
+            'video_id_placeholder' => \sprintf(__('e.g., %s', 'upload-field-to-youtube-for-acf'), 'dQw4w9WgXcQ'),
+            'video_id_set_successfully' => __('Video ID set successfully', 'upload-field-to-youtube-for-acf'),
+            'video_uploaded_id_retrieval_failed' => __('Your video was uploaded successfully to YouTube! However, we could not automatically retrieve the Video ID due to a technical limitation', 'upload-field-to-youtube-for-acf'),
+            'video_uploaded_successfully' => __('Video uploaded successfully', 'upload-field-to-youtube-for-acf'),
+            'wait_please' => __('Wait please', 'upload-field-to-youtube-for-acf'),
         ];
 
-        $this->env = [
-            'version' => FRUGAN_UFTYFACF_VERSION,
-            'url' => FRUGAN_UFTYFACF_URL,
-            'path' => FRUGAN_UFTYFACF_PATH,
-            'debug' => WP_DEBUG,
-            'locale' => get_locale(),
-            'cache_busting' => \defined('FRUGAN_UFTYFACF_CACHE_BUSTING_ENABLED') && !empty(FRUGAN_UFTYFACF_CACHE_BUSTING_ENABLED) && !is_numeric(FRUGAN_UFTYFACF_CACHE_BUSTING_ENABLED) && filter_var(FRUGAN_UFTYFACF_CACHE_BUSTING_ENABLED, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ? true : false,
-        ];
+        /*
+         * Environment values relating to the theme or plugin.
+         *
+         * @var array plugin or theme context such as 'url' and 'version'
+         */
+        $this->env = $this->container->get('env_settings');
 
         /*
          * Field type preview image.
@@ -155,85 +177,105 @@ class Field extends \acf_field
 
         parent::__construct();
 
-        add_action('admin_menu', [$this, 'admin_menu']);
-        add_action('admin_init', [$this, 'admin_init']);
-        add_action('admin_notices', [$this, 'admin_notices']);
+        add_action('admin_menu', [$this, 'admin_menu'], 10, 0);
+        add_action('admin_init', [$this, 'admin_init'], 10, 0);
+        add_action('admin_notices', [$this, 'admin_notices'], 10, 0);
         add_action('before_delete_post', [$this, 'before_delete_post']);
-        add_action('wp_ajax_get_youtube_upload_url', [$this, 'wp_ajax_get_youtube_upload_url']);
-        add_action('wp_ajax_save_youtube_video_id', [$this, 'wp_ajax_save_youtube_video_id']);
-        add_action('wp_ajax_get_videos_by_playlist', [$this, 'wp_ajax_get_videos_by_playlist']);
+        add_action('wp_ajax_get_youtube_upload_url', [$this, 'wp_ajax_get_youtube_upload_url'], 10, 0);
+        add_action('wp_ajax_upload_video_to_youtube', [$this, 'wp_ajax_upload_video_to_youtube'], 10, 0);
+        add_action('wp_ajax_get_video_id_from_upload', [$this, 'wp_ajax_get_video_id_from_upload'], 10, 0);
+        add_action('wp_ajax_save_youtube_video_id', [$this, 'wp_ajax_save_youtube_video_id'], 10, 0);
+        add_action('wp_ajax_get_videos_by_playlist', [$this, 'wp_ajax_get_videos_by_playlist'], 10, 0);
 
-        add_action($this->name.'__check_oauth_token', [$this, 'check_oauth_token']);
+        /** @psalm-suppress InvalidArgument */
+        // @phpstan-ignore-next-line argument.type
+        $this->add_action('check_oauth_token', [$this->google_client_manager, 'check_oauth_token'], 10, 0);
 
         // Migrate old options format if needed
         $this->migrate_options();
     }
 
-    // https://developers.google.com/youtube/terms/branding-guidelines
-    // https://www.youtube.com/yt/about/brand-resources/#logos-icons-colors
-    // YouTube's ToS only allow custom icons; dashicons like `dashicons-video-alt3` are not allowed.
+    /**
+     * Add settings page to the admin menu.
+     *
+     * YouTube's ToS only allow custom icons; dashicons like `dashicons-video-alt3` are not allowed.
+     * https://developers.google.com/youtube/terms/branding-guidelines
+     * https://www.youtube.com/yt/about/brand-resources/#logos-icons-colors
+     *
+     * Callback for admin_menu.
+     */
     public function admin_menu(): void
     {
-        if (current_user_can('manage_options') || current_user_can('manage_'.$this->name)) {
-            $capability = current_user_can('manage_options') ? 'manage_options' : 'manage_'.$this->name;
+        if (current_user_can('manage_options') || current_user_can('manage_'.$this->container->get('plugin_undername'))) {
+            $capability = current_user_can('manage_options') ? 'manage_options' : 'manage_'.$this->container->get('plugin_undername');
 
             add_options_page(
                 $this->label,               // Page title
                 $this->label,               // Menu title
                 $capability,                // Capability
-                $this->name,                // Menu slug
+                $this->container->get('plugin_undername'),                // Menu slug
                 [$this, 'settings_page'],   // Callback function
             );
         }
     }
 
+    /**
+     * Admin init actions.
+     * Handles logout and settings save.
+     * Callback for admin_init.
+     */
     public function admin_init(): void
     {
         $role = get_role('administrator');
         if ($role) {
-            $role->add_cap('manage_'.$this->name);
+            $role->add_cap('manage_'.$this->container->get('plugin_undername'));
         }
 
-        if (isset($_POST['action']) && 'logout' === $_POST['action']) {
-            delete_option($this->name.'__access_token');
+        if (isset($_POST['action']) && 'logout' === sanitize_text_field(wp_unslash($_POST['action']))) {
+            $this->cache_handler->delete_access_token();
 
             add_action('admin_notices', static function (): void {
                 echo '<div class="notice notice-success is-dismissible">';
                 echo '<p><strong>'.esc_html__('Successfully logged out from YouTube.', 'upload-field-to-youtube-for-acf').'</strong></p>';
                 echo '</div>';
-            });
+            }, 10, 0);
         }
 
         // Handle settings save
-        if (isset($_POST['action']) && $_POST['action'] === $this->name.'_save_settings') {
-            if (!wp_verify_nonce($_POST[$this->name.'_settings_nonce'] ?? '', $this->name.'_save_settings')) {
-                wp_die(__('Security check failed', 'upload-field-to-youtube-for-acf'));
+        if (isset($_POST['action']) && sanitize_text_field(wp_unslash($_POST['action'])) === $this->container->get('plugin_undername').'_save_settings') {
+            if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'] ?? '')))) {
+                wp_die(esc_html__('Security check failed', 'upload-field-to-youtube-for-acf'));
             }
 
-            if (!current_user_can('manage_options') && !current_user_can('manage_'.$this->name)) {
-                wp_die(__('Insufficient permissions', 'upload-field-to-youtube-for-acf'));
+            if (!current_user_can('manage_options') && !current_user_can('manage_'.$this->container->get('plugin_undername'))) {
+                wp_die(esc_html__('Insufficient permissions', 'upload-field-to-youtube-for-acf'));
             }
 
             // Allow extensions to save their settings
-            do_action($this->name.'_save_settings', $_POST);
+            $this->do_action(__FUNCTION__.'_save_settings', $_POST);
 
-            $this->log('info', __('Plugin settings saved successfully', 'upload-field-to-youtube-for-acf'));
+            $this->logger->info(__('Plugin settings saved successfully', 'upload-field-to-youtube-for-acf'));
 
             add_action('admin_notices', static function (): void {
                 echo '<div class="notice notice-success is-dismissible">';
                 echo '<p><strong>'.esc_html__('Settings saved successfully.', 'upload-field-to-youtube-for-acf').'</strong></p>';
                 echo '</div>';
-            });
+            }, 10, 0);
         }
     }
 
+    /**
+     * Admin notices to display in the admin area.
+     * Callback for admin_notices.
+     */
     public function admin_notices(): void
     {
-        if (isset($_GET['page']) && $this->name === $_GET['page']) {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Wordpress parameter
+        if (isset($_GET['page']) && $this->container->get('plugin_undername') === sanitize_text_field(wp_unslash($_GET['page']))) {
             return;
         }
 
-        $oauth = $this->handle_oauth();
+        $oauth = $this->google_client_manager->handle_oauth();
         $status = $oauth['status'] ?? 'error';
 
         switch ($status) {
@@ -270,7 +312,8 @@ class Field extends \acf_field
      * These settings appear on the ACF "Edit Field Group" admin page when
      * setting up the field.
      *
-     * @param array $field
+     * @param array<string, mixed> $field
+     *                                    Callback for render_field_settings
      */
     public function render_field_settings($field): void
     {
@@ -417,10 +460,14 @@ class Field extends \acf_field
     /**
      * HTML content to show when a publisher edits the field on the edit screen.
      *
-     * @param array $field the field settings and values
+     * @param array<string, mixed> $field the field settings and values
+     *                                    Callback for render_field
      */
     public function render_field($field): void
     {
+        $this->do_action(__FUNCTION__.'_before', $field);
+
+        $field = $this->apply_filters(__FUNCTION__.'_field', $field);
         ?>
 		<div class="<?php echo esc_attr($field['key']); ?>__wrapper <?php echo esc_attr($field['type']); ?>__wrapper">
             <input type="hidden" name="<?php echo esc_attr($field['name']); ?>" value="<?php echo esc_attr($field['value']); ?>" class="<?php echo esc_attr($field['key']); ?>__hidden_value_input">
@@ -431,7 +478,7 @@ class Field extends \acf_field
                         <img src="https://img.youtube.com/vi/<?php echo esc_attr($field['value']); ?>/hqdefault.jpg" alt="">
                     </a>
                 </p>
-			<?php } elseif ($this->get_access_token()) { ?>
+			<?php } elseif ($this->cache_handler->get_access_token()) { ?>
                 <input type="hidden" name="mode" class="<?php echo esc_attr($field['key']); ?>__hidden_mode_input">
 
                 <div class="<?php echo esc_attr($field['key']); ?>__tabs">
@@ -467,7 +514,7 @@ class Field extends \acf_field
                     <?php if (!empty($field['allow_select'])) { ?>
                         <div id="<?php echo esc_attr($field['key']); ?>__tab_2">
                             <?php
-                                       $result = $this->get_playlists_by_privacy_status($field['privacy_status']);
+                                $result = $this->youtube_api_service->get_playlists_by_privacy_status($field['privacy_status']);
                         if (!empty($result['items'])) { ?>
                                 <p>
                                     <label for="<?php echo esc_attr($field['key']); ?>__playlist_select">
@@ -509,6 +556,7 @@ class Field extends \acf_field
 ?>
 		</div>
 <?php
+        $this->do_action(__FUNCTION__.'_after', $field);
     }
 
     /**
@@ -520,10 +568,17 @@ class Field extends \acf_field
     {
         global $post;
 
-        $version = $this->env['version'];
-        $url = trailingslashit($this->env['url']);
-        $path = trailingslashit($this->env['path']);
-        $cache_busting = $this->env['cache_busting'];
+        Vite::init(
+            $this->env['path'],
+            $this->env['url'],
+            $this->env['version'],
+            $this->container->get('plugin_prefix')
+        );
+
+        // Add Vite dev scripts for HMR in development
+        if ($this->env['debug']) {
+            Vite::devScripts();
+        }
 
         // https://wordpress.stackexchange.com/a/273996/99214
         // https://stackoverflow.com/a/59665364/3929620
@@ -534,23 +589,19 @@ class Field extends \acf_field
         // If you're going to submit your plugin to the wordpress.org repo, then you need to load the CSS locally
         // (see: https://developer.wordpress.org/plugins/wordpress-org/detailed-plugin-guidelines/#8-plugins-may-not-send-executable-code-via-third-party-systems).
         // https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css
-        wp_enqueue_style(
+        Vite::enqueueStyle(
             'jquery-ui-css',
-            $url.'asset/css/jquery-ui.min'.($cache_busting ? '.'.filemtime($path.'asset/css/jquery-ui.min.css') : '').'.css',
-            ['acf-input'],
-            $version
+            'css/jquery-ui',
+            ['acf-input']
         );
 
         add_thickbox();
 
-        wp_register_script(
-            FRUGAN_UFTYFACF_NAME,
-            $url.'asset/js/main'.($cache_busting ? '.'.filemtime($path.'asset/js/main.js') : '').'.js',
+        Vite::enqueueScript(
+            $this->container->get('plugin_prefix'),
+            'js/main',
             ['acf-input'],
-            $version,
-            [
-                'in_footer' => true,
-            ]
+            true
         );
 
         // $object_name is the name of the variable which will contain the data.
@@ -558,173 +609,295 @@ class Field extends \acf_field
         // Thus, the value here should be properly prefixed with the slug or another unique value,
         // to prevent conflicts. However, as this is a JavaScript object name, it cannot contain dashes.
         // Use underscores or camelCasing.
-        wp_localize_script(FRUGAN_UFTYFACF_NAME, $this->name.'_obj', [
+        wp_localize_script($this->container->get('plugin_prefix'), $this->container->get('plugin_undername').'_obj', [
+            '_wpnonce' => wp_create_nonce(),
             'postStatus' => $post ? $post->post_status : null,
+            'serverUpload' => $this->env['server_upload'],
+            'debug' => $this->env['debug'],
         ]);
 
-        wp_register_style(
-            FRUGAN_UFTYFACF_NAME,
-            $url.'asset/css/main'.($cache_busting ? '.'.filemtime($path.'asset/css/main.css') : '').'.css',
-            ['acf-input'],
-            $version
+        Vite::enqueueStyle(
+            $this->container->get('plugin_prefix'),
+            'css/main',
+            ['acf-input']
         );
-
-        wp_enqueue_script(FRUGAN_UFTYFACF_NAME);
-        wp_enqueue_style(FRUGAN_UFTYFACF_NAME);
     }
 
+    /**
+     * Validate the field value before saving.
+     *
+     * This method validates the YouTube video ID and checks if it exists
+     * in the user's authorized YouTube account.
+     *
+     * @param mixed $valid
+     * @param mixed $field
+     * @param mixed $input
+     *
+     * @return mixed (bool|string) an error message or true if the value is valid
+     *
+     * @throws \Exception if an error occurs during validation
+     */
     public function validate_value($valid, mixed $value, $field, $input)
     {
         try {
             if (empty($value) && !empty($field['required'])) {
-                // translators: %s: label
+                // translators: %s: field label
                 throw new \InvalidArgumentException(\sprintf(__('Empty field "%1$s"', 'upload-field-to-youtube-for-acf'), $field['label']));
             }
 
             if (!empty($value)) {
-                $api_update_on_post_update = (!empty($_POST['mode']) && 'upload' === $_POST['mode']) || !empty($field['api_update_on_post_update']);
+                $this->do_action(__FUNCTION__.'_before', $valid, $value, $field, $input);
+
+                // Safely get post ID with sanitization
+                $post_id = 0;
+                // phpcs:ignore WordPress.Security.NonceVerification.Missing -- ACF handles security for field validation
+                if (isset($_POST['post_ID'])) {
+                    // phpcs:ignore WordPress.Security.NonceVerification.Missing -- ACF handles security for field validation
+                    $post_id = (int) sanitize_text_field(wp_unslash($_POST['post_ID']));
+                // phpcs:ignore WordPress.Security.NonceVerification.Missing -- ACF handles security for field validation
+                } elseif (isset($_POST['post_id'])) {
+                    // phpcs:ignore WordPress.Security.NonceVerification.Missing -- ACF handles security for field validation
+                    $post_id = (int) sanitize_text_field(wp_unslash($_POST['post_id']));
+                }
+
+                // Check if this should update based on field setting (for normal post updates)
+                $field_setting_update = !empty($field['api_update_on_post_update']);
+
+                // Check if mode is explicitly set to upload in POST data (for form submissions)
+                // phpcs:ignore WordPress.Security.NonceVerification.Missing -- ACF handles security for field validation
+                $is_form_upload = isset($_POST['mode']) && 'upload' === sanitize_text_field(wp_unslash($_POST['mode']));
+
+                // Determine if we should update: always for form uploads,
+                // or when field setting allows it for normal post updates
+                $should_update = $is_form_upload || $field_setting_update;
+
+                $api_update_on_post_update = $this->apply_filters(
+                    __FUNCTION__.'_should_update',
+                    $should_update,
+                    $value,
+                    $field,
+                    $input,
+                    $post_id
+                );
+
                 if ($api_update_on_post_update) {
-                    $post_id = (int) ($_POST['post_ID'] ?? $_POST['post_id']);
                     $is_gutenberg = \function_exists('use_block_editor_for_post') && use_block_editor_for_post($post_id);
                     if ($is_gutenberg) {
                         $post = get_post($post_id);
                         $title = sanitize_text_field($post->post_title ?? '');
                         $excerpt = sanitize_text_field($post->post_excerpt ?? '');
                     } else {
-                        $title = isset($_POST['post_title']) ? sanitize_text_field($_POST['post_title']) : '';
-                        $excerpt = isset($_POST['excerpt']) ? sanitize_text_field($_POST['excerpt']) : '';
+                        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- ACF handles security for field validation
+                        $title = isset($_POST['post_title']) ? sanitize_text_field(wp_unslash($_POST['post_title'])) : '';
+                        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- ACF handles security for field validation
+                        $excerpt = isset($_POST['excerpt']) ? sanitize_text_field(wp_unslash($_POST['excerpt'])) : '';
                     }
 
                     if (empty($title)) {
-                        // translators: %s: Title
+                        // translators: %s: field name (Title)
                         throw new \LengthException(\sprintf(__('Empty field "%1$s"', 'upload-field-to-youtube-for-acf'), __('Title', 'upload-field-to-youtube-for-acf')));
                     }
 
                     /*if (empty($excerpt)) {
-                        // translators: %s: Excerpt
+                        // translators: %s: field name (Excerpt)
                         throw new \LengthException(\sprintf(__('Empty field "%1$s"', 'upload-field-to-youtube-for-acf'), __('Excerpt', 'upload-field-to-youtube-for-acf')));
                     }*/
                 }
 
-                $this->check_oauth_token();
-                $googleServiceYouTube = new \Google_Service_YouTube($this->get_google_client());
-
-                // Quota impact: A call to this method has a quota cost of 1 unit.
-                $response = $googleServiceYouTube->videos->listVideos('snippet', ['id' => $value]);
-
-                // translators: %s: value
-                $this->log('debug', \sprintf(__('Video "%1$s" retrieved successfully', 'upload-field-to-youtube-for-acf'), $value), ['response' => $response]);
-
-                if (empty($response->getItems())) {
+                if (!$this->youtube_api_service->validate_video_exists($value)) {
                     throw new \Exception(__('This video is not associated with your authorized YouTube account', 'upload-field-to-youtube-for-acf'));
                 }
+
+                $this->do_action(__FUNCTION__.'_after', $valid, $value, $field, $input);
             }
         } catch (\InvalidArgumentException|\LengthException $exception) {
             // FIXED - https://github.com/inpsyde/Wonolog/blob/2.x/src/HookLogFactory.php#L135
             // use `$exception->getMessage()` instead of `$exception`, because Wonolog
             // assigns the ERROR level to messages that are instances of Throwable
-            $this->log('warning', $exception->getMessage());
+            $this->logger->warning($exception->getMessage(), [
+                'exception' => $exception,
+                'video_id' => $value,
+                'field' => $field,
+                'input' => $input,
+            ]);
             $valid = $exception->getMessage();
-        } catch (\Google_Service_Exception $exception) {
-            $this->log('error', $exception, ['response' => $response ?? null]);
+            $this->do_action(__FUNCTION__.'_error', $exception, $valid, $value, $field, $input);
+        } catch (\Google\Service\Exception $exception) {
+            $this->logger->error($exception, [
+                'video_id' => $value,
+                'field' => $field,
+                'input' => $input,
+            ]);
             $error_data = json_decode($exception->getMessage(), true);
             $valid = $error_data['error']['message'] ?? $exception->getMessage();
+            $this->do_action(__FUNCTION__.'_error', $exception, $valid, $value, $field, $input);
         } catch (\Exception $exception) {
-            $this->log('error', $exception);
+            $this->logger->error($exception, [
+                'video_id' => $value,
+                'field' => $field,
+                'input' => $input,
+            ]);
             $valid = $exception->getMessage();
+            $this->do_action(__FUNCTION__.'_error', $exception, $valid, $value, $field, $input);
         }
 
         return $valid;
     }
 
+    /**
+     * Update the field value and optionally update YouTube video metadata.
+     *
+     * This method is called when the field value is saved and can optionally
+     * update the YouTube video's title and description based on post content.
+     *
+     * @param mixed $field
+     *
+     * @return mixed the original value, unchanged
+     *
+     * @throws \Exception if an error occurs during video metadata update
+     */
     public function update_value(mixed $value, mixed $post_id, $field)
     {
         try {
-            $api_update_on_post_update = (!empty($_POST['mode']) && 'upload' === $_POST['mode']) || !empty($field['api_update_on_post_update']);
+            // Check specifically if this is one of our plugin's AJAX upload actions
+            $is_our_ajax_upload = false;
+            // phpcs:ignore WordPress.Security.NonceVerification.Missing -- ACF handles security for field updates
+            if (isset($_POST['action'])) {
+                // phpcs:ignore WordPress.Security.NonceVerification.Missing -- ACF handles security for field updates
+                $action = sanitize_text_field(wp_unslash($_POST['action']));
+                $is_our_ajax_upload = \in_array($action, [
+                    'save_youtube_video_id',
+                    'upload_video_to_youtube',
+                ], true);
+            }
+
+            // Check if this should update based on field setting (for normal post updates)
+            $field_setting_update = !empty($field['api_update_on_post_update']);
+
+            // Check if mode is explicitly set to upload in POST data (for form submissions)
+            // phpcs:ignore WordPress.Security.NonceVerification.Missing -- ACF handles security for field updates
+            $is_form_upload = isset($_POST['mode']) && 'upload' === sanitize_text_field(wp_unslash($_POST['mode']));
+
+            // Determine if we should update: always for our AJAX upload actions or form uploads,
+            // or when field setting allows it for normal post updates
+            $should_update = $is_our_ajax_upload || $is_form_upload || $field_setting_update;
+
+            $api_update_on_post_update = $this->apply_filters(
+                __FUNCTION__.'_should_update',
+                $should_update,
+                $value,
+                $post_id,
+                $field
+            );
+
             if (!$api_update_on_post_update) {
                 return $value;
             }
 
             if (!empty($value)) {
-                $this->check_oauth_token();
-                $googleServiceYouTube = new \Google_Service_YouTube($this->get_google_client());
+                $this->do_action(__FUNCTION__.'_before', $value, $post_id, $field);
 
-                // Quota impact: A call to this method has a quota cost of 1 unit.
-                $response = $googleServiceYouTube->videos->listVideos('snippet', ['id' => $value]);
-                $videoSnippet = $response->getItems()[0]->getSnippet();
+                $data = $this->apply_filters(__FUNCTION__.'_data', [
+                    'category_id' => $field['category_id'],
+                    'title' => get_the_title($post_id),
+                    'description' => get_post_field('post_excerpt', $post_id),
+                ], $value, $post_id, $field);
 
-                $googleServiceYouTubeVideoSnippet = new \Google_Service_YouTube_VideoSnippet();
-                $googleServiceYouTubeVideoSnippet->setCategoryId($videoSnippet->getCategoryId() ?? $field['category_id']);
-                $googleServiceYouTubeVideoSnippet->setTitle(get_the_title($post_id));
+                $response = $this->youtube_api_service->update_video_metadata($value, $data);
 
-                if (!empty($excerpt = get_post_field('post_excerpt', $post_id))) {
-                    $googleServiceYouTubeVideoSnippet->setDescription($excerpt);
-                }
-
-                $googleServiceYouTubeVideo = new \Google_Service_YouTube_Video();
-                $googleServiceYouTubeVideo->setId($value);
-                $googleServiceYouTubeVideo->setSnippet($googleServiceYouTubeVideoSnippet);
-
-                // Quota impact: A call to this method has a quota cost of 50 units.
-                $response = $googleServiceYouTube->videos->update('snippet', $googleServiceYouTubeVideo);
-
-                // translators: %s: value
-                $this->log('info', \sprintf(__('Video "%1$s" updated successfully', 'upload-field-to-youtube-for-acf'), $value), ['response' => $response]);
+                $this->do_action(__FUNCTION__.'_after', $value, $post_id, $field, $response);
             }
         } catch (\Exception $exception) {
-            $this->log('error', $exception, ['response' => $response ?? null]);
+            $this->logger->error($exception, [
+                'video_id' => $value,
+                'post_id' => $post_id,
+                'field' => $field,
+                // @phpstan-ignore-next-line - Avoid PHPStan false positive: response may be set by hooks in real WordPress environment
+                'response' => $response ?? null,
+            ]);
+            // @phpstan-ignore-next-line - Avoid PHPStan false positive: response may be set by hooks in real WordPress environment
+            $this->do_action(__FUNCTION__.'_error', $exception, $value, $post_id ?? null, $field ?? null, $response ?? null);
         }
 
         return $value;
     }
 
+    /**
+     * Handle post deletion and optionally delete associated YouTube videos.
+     *
+     * This method is triggered before a post is deleted and can optionally
+     * delete the associated YouTube videos if configured to do so.
+     *
+     * @param int $post_id the ID of the post being deleted
+     *
+     * @throws \Exception if an error occurs during video deletion
+     */
     public function before_delete_post(int $post_id): void
     {
         $fields = get_field_objects($post_id);
 
         if ($fields) {
             foreach ($fields as $field) {
-                if (!empty($field['type']) && !empty($field['value']) && $field['type'] === $this->name) {
+                if (!empty($field['type']) && !empty($field['value']) && $field['type'] === $this->container->get('plugin_undername')) {
                     try {
-                        if (empty($field['api_delete_on_post_delete'])) {
+                        $this->do_action(__FUNCTION__.'_before', $post_id, $field);
+
+                        $should_delete = $this->apply_filters(__FUNCTION__.'_should_delete', $field['api_delete_on_post_delete'] ?? false, $post_id, $field);
+
+                        if (!$should_delete) {
                             continue;
                         }
 
-                        $this->check_oauth_token();
-                        $googleServiceYouTube = new \Google_Service_YouTube($this->get_google_client());
+                        $this->youtube_api_service->delete_video($field['value']);
 
-                        // Quota impact: A call to this method has a quota cost of 50 units.
-                        $response = $googleServiceYouTube->videos->delete($field['value']);
-
-                        // translators: %s: value
-                        $this->log('info', \sprintf(__('Video "%1$s" deleted successfully', 'upload-field-to-youtube-for-acf'), $field['value']), ['response' => $response]);
+                        $this->do_action(__FUNCTION__.'_after', $post_id, $field);
                     } catch (\Exception $exception) {
-                        $this->log('error', $exception, ['response' => $response ?? null]);
+                        $this->logger->error($exception, [
+                            'post_id' => $post_id,
+                            'video_id' => $field['value'],
+                        ]);
+                        $this->do_action(__FUNCTION__.'_error', $exception, $post_id, $field);
                     }
                 }
             }
         }
     }
 
+    /**
+     * Display the plugin settings page in WordPress admin.
+     *
+     * This method renders the settings page where users can authorize
+     * the application with YouTube and configure plugin settings.
+     *
+     * @throws \Exception if an error occurs during OAuth handling
+     */
     public function settings_page(): void
     {
-        $oauth = $this->handle_oauth();
+        $oauth = $this->google_client_manager->handle_oauth();
         $status = $oauth['status'] ?? 'error';
 
         echo '<div class="wrap">';
         echo '<h1>'.esc_html($this->label).'</h1>';
 
+        $this->do_action(__FUNCTION__.'_before', $oauth, $this);
+
         switch ($status) {
             case 'authorize':
+                $this->do_action(__FUNCTION__.'_'.$status.'_before', $oauth, $this);
+
                 echo '<div class="notice notice-warning is-dismissible">';
                 echo '<h3>'.esc_html($this->label).'</h3>';
                 echo '<p><strong>'.esc_html($oauth['message']).'</strong></p>';
                 echo '<p><a href="'.esc_url($oauth['auth_url']).'" class="button button-primary">'.esc_html__('Authorize App', 'upload-field-to-youtube-for-acf').'</a></p>';
                 echo '</div>';
 
+                $this->do_action(__FUNCTION__.'_'.$status.'_after', $oauth, $this);
+
                 break;
 
             case 'authorized':
+                $this->do_action(__FUNCTION__.'_'.$status.'_before', $oauth, $this);
+
                 echo '<div class="notice notice-success">';
                 echo '<p><strong>'.esc_html($oauth['message']).'</strong></p>';
                 echo '</div>';
@@ -736,16 +909,16 @@ class Field extends \acf_field
 
                 // Check if there are any extensions that want to add settings
                 ob_start();
-                do_action($this->name.'_'.__FUNCTION__.'_after', $oauth, $this);
+                $this->do_action(__FUNCTION__.'_'.$status.'_after', $oauth, $this);
                 $output = ob_get_clean();
 
-                if (!empty(trim($output))) {
+                if (false !== $output && !empty(trim($output))) {
                     echo '<hr>';
                     echo '<form method="post" action="">';
-                    wp_nonce_field($this->name.'_save_settings', $this->name.'_settings_nonce');
-                    echo '<input type="hidden" name="action" value="'.$this->name.'_save_settings">';
+                    wp_nonce_field();
+                    echo '<input type="hidden" name="action" value="'.esc_attr($this->container->get('plugin_undername').'_save_settings').'">';
 
-                    echo $output;
+                    echo wp_kses_post($output);
 
                     submit_button(__('Save Settings', 'upload-field-to-youtube-for-acf'));
                     echo '</form>';
@@ -754,439 +927,573 @@ class Field extends \acf_field
                 break;
 
             case 'error':
+                $this->do_action(__FUNCTION__.'_'.$status.'_before', $oauth, $this);
+
                 echo '<div class="notice notice-error">';
                 echo '<p><strong>'.esc_html($oauth['message']).'</strong></p>';
                 echo '</div>';
 
+                $this->do_action(__FUNCTION__.'_'.$status.'_after', $oauth, $this);
+
                 break;
         }
+
+        $this->do_action(__FUNCTION__.'_after', $oauth, $this);
 
         echo '</div>';
     }
 
-    public function set_google_client(): void
-    {
-        if ($this->get_google_client() instanceof Client) {
-            return;
-        }
-
-        $this->client = new Client();
-        $this->client->setClientId(FRUGAN_UFTYFACF_GOOGLE_OAUTH_CLIENT_ID);
-        $this->client->setClientSecret(FRUGAN_UFTYFACF_GOOGLE_OAUTH_CLIENT_SECRET);
-        $this->client->setRedirectUri(admin_url());
-        $this->client->addScope(Oauth2::USERINFO_EMAIL);
-        $this->client->addScope(YouTube::YOUTUBE_FORCE_SSL);
-        $this->client->addScope(YouTube::YOUTUBE_UPLOAD);
-        $this->client->setAccessType('offline');
-        $this->client->setPrompt('select_account consent');
-
-        if ($this->is_wonolog_active()) {
-            // https://github.com/inpsyde/Wonolog/pull/55
-            $this->client->setLogger(\Inpsyde\Wonolog\makeLogger());
-        }
-    }
-
-    public function get_google_client()
-    {
-        return $this->client;
-    }
-
-    public function set_access_token(null|array|bool $token): void
-    {
-        $this->access_token = $token;
-    }
-
-    public function get_access_token(): null|array|bool
-    {
-        return $this->access_token;
-    }
-
-    public function check_oauth_token(): void
-    {
-        $this->set_access_token(get_option($this->name.'__access_token'));
-
-        if (!empty($access_token = $this->get_access_token())) {
-            $this->set_google_client();
-
-            try {
-                $this->client->setAccessToken($access_token);
-            } catch (\Exception $exception) {
-                // FIXED - https://github.com/inpsyde/Wonolog/blob/2.x/src/HookLogFactory.php#L135
-                // use `$exception->getMessage()` instead of `$exception`, because Wonolog
-                // assigns the ERROR level to messages that are instances of Throwable
-                $this->log('warning', $exception->getMessage(), ['access_token' => $access_token]);
-            }
-
-            try {
-                if ($this->client->isAccessTokenExpired()) {
-                    if (!empty($refresh_token = $this->client->getRefreshToken())) {
-                        $this->set_access_token($this->client->fetchAccessTokenWithRefreshToken($refresh_token));
-
-                        $access_token = $this->get_access_token();
-                        $this->client->setAccessToken($access_token);
-                        update_option($this->name.'__access_token', $access_token);
-                    } else {
-                        throw new \UnexpectedValueException(\sprintf(__('Unable to retrieve "%1$s"', 'upload-field-to-youtube-for-acf'), 'refresh_token'));
-                    }
-                }
-            } catch (\Exception $exception) {
-                $this->log('error', $exception, ['access_token' => $access_token, 'refresh_token' => $refresh_token ?? null]);
-                delete_option($this->name.'__access_token');
-                $this->set_access_token(null);
-            }
-        }
-    }
-
+    /**
+     * Activate the plugin and schedule necessary cron jobs.
+     *
+     * This static method is called when the plugin is activated and sets up
+     * scheduled tasks for token maintenance and other periodic operations.
+     *
+     * @throws \Exception if an error occurs during activation
+     */
     public static function activate(): void
     {
-        if (!wp_next_scheduled(FRUGAN_UFTYFACF_NAME_UNDERSCORE.'__check_oauth_token')) {
-            wp_schedule_event(time(), 'hourly', FRUGAN_UFTYFACF_NAME_UNDERSCORE.'__check_oauth_token');
+        $container = wpspaghetti_uftyfacf_get_container();
+        $instance = $container->get(self::class);
+        $hook = $instance->get_cron_hook();
+        $schedule = $instance->get_cron_schedule();
+
+        // Action before activation
+        $instance->do_action(__FUNCTION__.'_before', $instance, $hook, $schedule);
+
+        if (!wp_next_scheduled($hook)) {
+            $result = wp_schedule_event(time(), $schedule, $hook);
+
+            if (false === $result) {
+                $container->get(Logger::class)->error('Failed to schedule cron event', [
+                    'hook' => $hook,
+                    'schedule' => $schedule,
+                    'default_schedule' => $instance->env['cron_schedule'],
+                ]);
+            } else {
+                $container->get(Logger::class)->info('Cron event scheduled successfully', [
+                    'hook' => $hook,
+                    'schedule' => $schedule,
+                    'next_run' => wp_next_scheduled($hook),
+                    'default_schedule' => $instance->env['cron_schedule'],
+                ]);
+            }
         }
+
+        // Action after activation
+        $instance->do_action(__FUNCTION__.'_after', $instance, $hook, $schedule, $result ?? null);
     }
 
+    /**
+     * Deactivate the plugin and clean up resources.
+     *
+     * This static method is called when the plugin is deactivated and handles
+     * cleanup of tokens, scheduled events, and temporary data.
+     *
+     * @param bool $network_deactivating whether this is a network deactivation
+     *                                   for multisite installations
+     *
+     * @throws \Exception if an error occurs during deactivation
+     */
     public static function deactivate($network_deactivating = false): void
     {
-        delete_option(FRUGAN_UFTYFACF_NAME_UNDERSCORE.'__access_token');
+        $container = wpspaghetti_uftyfacf_get_container();
+        $instance = $container->get(self::class);
+        $hook = $instance->get_cron_hook();
 
-        $timestamp = wp_next_scheduled(FRUGAN_UFTYFACF_NAME_UNDERSCORE.'__check_oauth_token');
-        wp_unschedule_event($timestamp, FRUGAN_UFTYFACF_NAME_UNDERSCORE.'__check_oauth_token');
-    }
+        // Action before deactivation
+        $instance->do_action(__FUNCTION__.'_before', $network_deactivating, $instance, $hook);
 
-    public function handle_oauth(): array
-    {
-        // @phpstan-ignore-next-line
-        if (!\defined('FRUGAN_UFTYFACF_GOOGLE_OAUTH_CLIENT_ID') || !\defined('FRUGAN_UFTYFACF_GOOGLE_OAUTH_CLIENT_SECRET') || empty(FRUGAN_UFTYFACF_GOOGLE_OAUTH_CLIENT_ID) || empty(FRUGAN_UFTYFACF_GOOGLE_OAUTH_CLIENT_SECRET)) {
-            $data = [
-                'status' => 'error',
-                'message' => __('Missing or wrong OAuth credentials.', 'upload-field-to-youtube-for-acf'),
-            ];
+        // Delete access token
+        $container->get(CacheHandler::class)->delete_access_token();
 
-            $this->log('error', $data);
+        // Unschedule cron
+        $timestamp = wp_next_scheduled($hook);
+        if ($timestamp) {
+            $result = wp_unschedule_event($timestamp, $hook);
 
-            return $data;
+            if (false === $result) {
+                $container->get(Logger::class)->warning('Failed to unschedule cron event', [
+                    'hook' => $hook,
+                    'timestamp' => $timestamp,
+                ]);
+            } else {
+                $container->get(Logger::class)->info('Cron event unscheduled successfully', [
+                    'hook' => $hook,
+                ]);
+            }
         }
 
-        $this->check_oauth_token();
-
-        if (empty($access_token = $this->get_access_token()) || !isset($access_token['access_token'])) {
-            if (!current_user_can('manage_options') && !current_user_can('manage_'.$this->name)) {
-                $data = [
-                    'status' => 'error',
-                    'message' => __('App not authorized, contact your system administrator.', 'upload-field-to-youtube-for-acf'),
-                ];
-
-                $this->log('error', $data);
-
-                return $data;
-            }
-
-            $this->set_google_client();
-
-            if (isset($_GET['code'])) {
-                $this->client->authenticate(wp_unslash($_GET['code']));
-                $this->set_access_token($this->client->getAccessToken());
-                update_option($this->name.'__access_token', $this->get_access_token());
-
-                $data = [
-                    'status' => 'success',
-                    'message' => __('App authorized! You can now upload videos to YouTube.', 'upload-field-to-youtube-for-acf'),
-                ];
-
-                $this->log('info', $data);
-
-                return $data;
-            }
-
-            $auth_url = $this->client->createAuthUrl();
-
-            return [
-                'status' => 'authorize',
-                'message' => __('Authorize the app to upload videos to YouTube:', 'upload-field-to-youtube-for-acf'),
-                'auth_url' => $auth_url,
-            ];
-        }
-
-        $googleServiceOauth2 = new \Google_Service_Oauth2($this->get_google_client());
-        $user_info = $googleServiceOauth2->userinfo->get();
-
-        return [
-            'status' => 'authorized',
-            // translators: %s: email
-            'message' => \sprintf(__('App authorized! You are logged in as: %1$s', 'upload-field-to-youtube-for-acf'), $user_info->email),
-        ];
+        // Action after deactivation
+        $instance->do_action(__FUNCTION__.'_after', $network_deactivating, $instance, $hook, $timestamp);
     }
 
-    public function get_playlists_by_privacy_status($privacy_status): array
-    {
-        $result = [];
-
-        try {
-            $this->check_oauth_token();
-            $googleServiceYouTube = new \Google_Service_YouTube($this->get_google_client());
-            $params = [
-                'part' => 'snippet,status',
-                'mine' => true,
-                'maxResults' => 50,
-            ];
-
-            // Quota impact: A call to this method has a quota cost of 1 unit.
-            $response = $googleServiceYouTube->playlists->listPlaylists('snippet,status', $params);
-
-            $this->log('debug', __('Playlists retrieved successfully', 'upload-field-to-youtube-for-acf'), [
-                'privacy_status' => $privacy_status,
-                'response' => $response,
-            ]);
-
-            foreach ($response->getItems() as $item) {
-                $playlistId = $item->getId();
-                if (!isset($result[$playlistId])) {
-                    $status = $item->getStatus();
-                    if ($status && $status->getPrivacyStatus() === $privacy_status) {
-                        $result[$playlistId] = [
-                            'id' => $playlistId,
-                            'title' => $item->getSnippet()->getTitle(),
-                        ];
-                    }
-                }
-            }
-
-            if ($result) {
-                $result = [
-                    'items' => array_values($result),
-                ];
-
-                if (!empty($nextPageToken = $response->getNextPageToken())) {
-                    $result['nextPageToken'] = $nextPageToken;
-                }
-            }
-        } catch (\Exception $exception) {
-            $this->log('error', $exception, ['response' => $response ?? null]);
-        }
-
-        return $result;
-    }
-
-    // https://stackoverflow.com/a/74402514/3929620
-    // https://developers.google.com/youtube/v3/guides/using_resumable_upload_protocol
-    // https://github.com/youtube/api-samples/blob/master/php/resumable_upload.php
-    // https://github.com/googleapis/google-api-php-client
-    // https://developers.google.com/youtube/v3/getting-started#quota
-    // https://developers.google.com/youtube/v3/determine_quota_cost
+    /**
+     * Get YouTube upload URL for resumable upload.
+     * This method is called via AJAX to obtain a unique upload URL
+     * for uploading a video file directly to YouTube.
+     *
+     * @throws \Exception if an error occurs during the process
+     */
     public function wp_ajax_get_youtube_upload_url(): void
     {
         try {
+            // Verify nonce for security
+            if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'] ?? '')))) {
+                throw new \InvalidArgumentException(__('Security check failed', 'upload-field-to-youtube-for-acf'));
+            }
+
             $post_id = isset($_POST['post_id']) ? (int) $_POST['post_id'] : 0;
             if (empty($post_id)) {
-                // translators: %s: post_id
+                // translators: %s: field name (post_id)
                 throw new \InvalidArgumentException(\sprintf(__('Empty field "%1$s"', 'upload-field-to-youtube-for-acf'), 'post_id'));
             }
 
-            $field_key = isset($_POST['field_key']) ? sanitize_text_field($_POST['field_key']) : '';
+            $field_key = isset($_POST['field_key']) ? sanitize_text_field(wp_unslash($_POST['field_key'])) : '';
             if (empty($field_key)) {
-                // translators: %s: field_key
+                // translators: %s: field name (field_key)
                 throw new \InvalidArgumentException(\sprintf(__('Empty field "%1$s"', 'upload-field-to-youtube-for-acf'), 'field_key'));
             }
 
             // https://support.advancedcustomfields.com/forums/topic/get-choices-from-field-without-post_id/
-            $field = get_field_object($field_key);
+            $field = $this->apply_filters(__FUNCTION__.'_field', get_field_object($field_key));
             if (!$field) {
-                // translators: %s: field_key
+                // translators: %s: field key value
                 throw new \InvalidArgumentException(\sprintf(__('Unable to retrieve field "%1$s"', 'upload-field-to-youtube-for-acf'), $field_key));
             }
 
-            $this->check_oauth_token();
-            $googleServiceYouTube = new \Google_Service_YouTube($this->get_google_client());
+            $this->do_action(__FUNCTION__.'_before', $post_id, $field_key, $field);
 
-            $googleServiceYouTubeVideoSnippet = new \Google_Service_YouTube_VideoSnippet();
-            $googleServiceYouTubeVideoSnippet->setCategoryId($field['category_id']);
-            $googleServiceYouTubeVideoSnippet->setTags(explode(',', $field['tags']));
-            $googleServiceYouTubeVideoSnippet->setTitle(get_the_title($post_id));
+            $upload_url = $this->youtube_api_service->get_youtube_upload_url($post_id, $field);
 
-            if (!empty($excerpt = get_post_field('post_excerpt', $post_id))) {
-                $googleServiceYouTubeVideoSnippet->setDescription($excerpt);
-            }
-
-            $googleServiceYouTubeVideoStatus = new \Google_Service_YouTube_VideoStatus();
-            // All videos uploaded via the videos.insert endpoint from unverified API projects
-            // created after 28 July 2020 will be restricted to private viewing mode.
-            // To lift this restriction, each API project must undergo an audit to verify compliance
-            // with the Terms of Service. Please see the API Revision History for more details.
-            $googleServiceYouTubeVideoStatus->setPrivacyStatus($field['privacy_status']);
-            $googleServiceYouTubeVideoStatus->setSelfDeclaredMadeForKids((bool) $field['made_for_kids']); // or setMadeForKids()
-
-            $googleServiceYouTubeVideo = new \Google_Service_YouTube_Video();
-            $googleServiceYouTubeVideo->setSnippet($googleServiceYouTubeVideoSnippet);
-            $googleServiceYouTubeVideo->setStatus($googleServiceYouTubeVideoStatus);
-
-            // Quota impact: A call to this method has a quota cost of 1600 units.
-            $response = $googleServiceYouTube->videos->insert('snippet,status', $googleServiceYouTubeVideo, [
-                'uploadType' => 'resumable',
-            ]);
-
-            $uploadUrl = $response->getRequest()->getLastHeaders()['location'] ?? null;
-            if ($uploadUrl) {
-                // translators: %s: response
-                $this->log('debug', \sprintf(__('Video "%1$s" retrieved successfully', 'upload-field-to-youtube-for-acf'), 'response'), ['response' => $response]);
-                wp_send_json_success(['upload_url' => $uploadUrl]);
-            } else {
-                // translators: %s: location
-                throw new \Exception(\sprintf(__('Unable to retrieve "%1$s" from response headers', 'upload-field-to-youtube-for-acf'), 'location'));
-            }
-        } catch (\Google_Service_Exception $exception) {
-            $this->log('error', $exception, ['response' => $response ?? null]);
-            $error_data = json_decode($exception->getMessage(), true);
-            $error_message = $error_data['error']['message'] ?? $exception->getMessage();
-            wp_send_json_error(['message' => $error_message]);
+            $this->do_action(__FUNCTION__.'_after', $upload_url, $post_id, $field);
+            wp_send_json_success(['upload_url' => $upload_url]);
         } catch (\Exception $exception) {
-            $this->log('error', $exception);
+            $this->logger->error($exception, [
+                'post_id' => $post_id ?? null,
+                'field_key' => $field_key ?? null,
+            ]);
+            $this->do_action(__FUNCTION__.'_error', $exception, $post_id ?? null, $field ?? null);
             wp_send_json_error(['message' => $exception->getMessage()]);
         }
     }
 
+    /**
+     * Upload video file directly to YouTube via server-side processing.
+     *
+     * This method handles the complete upload process on the server side,
+     * including file validation, metadata preparation, and chunked upload to YouTube.
+     *
+     * @throws \Exception if an error occurs during the upload process
+     */
+    public function wp_ajax_upload_video_to_youtube(): void
+    {
+        try {
+            // Verify nonce for security
+            if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'] ?? '')))) {
+                throw new \InvalidArgumentException(__('Security check failed', 'upload-field-to-youtube-for-acf'));
+            }
+
+            $post_id = isset($_POST['post_id']) ? (int) $_POST['post_id'] : 0;
+            if (empty($post_id)) {
+                // translators: %s: field name (post_id)
+                throw new \InvalidArgumentException(\sprintf(__('Empty field "%1$s"', 'upload-field-to-youtube-for-acf'), 'post_id'));
+            }
+
+            $field_key = isset($_POST['field_key']) ? sanitize_text_field(wp_unslash($_POST['field_key'])) : '';
+            if (empty($field_key)) {
+                // translators: %s: field name (field_key)
+                throw new \InvalidArgumentException(\sprintf(__('Empty field "%1$s"', 'upload-field-to-youtube-for-acf'), 'field_key'));
+            }
+
+            // Validate uploaded file using WordPress functions
+            if (!isset($_FILES['video_file'])) {
+                throw new \InvalidArgumentException(__('No video file uploaded', 'upload-field-to-youtube-for-acf'));
+            }
+
+            /*
+             * Use wp_handle_upload() instead of direct $_FILES access for WordPress compliance.
+             *
+             * This approach introduces a small overhead as the file is moved from PHP's temporary
+             * directory (/tmp) to WordPress uploads directory (/wp-content/uploads/) and then read
+             * from there, instead of reading directly from /tmp. However, this provides significant
+             * security benefits:
+             *
+             * - Automatic file type validation (MIME type vs extension matching)
+             * - File size and upload error checking
+             * - Protection against malicious uploads
+             * - WordPress Coding Standards compliance (required for wordpress.org)
+             *
+             * The performance impact is minimal (one additional file operation) compared to the
+             * security and compliance benefits gained.
+             */
+            if (!\function_exists('wp_handle_upload')) {
+                if (file_exists(ABSPATH.'wp-admin/includes/file.php')) {
+                    // @phpstan-ignore-next-line
+                    require_once ABSPATH.'wp-admin/includes/file.php';
+                } else {
+                    throw new \RuntimeException(__('WordPress file handling functions not available', 'upload-field-to-youtube-for-acf'));
+                }
+            }
+
+            // Custom upload handling for temporary video processing
+            $upload_overrides = [
+                'test_form' => false, // Skip form validation since this is AJAX
+                'test_type' => true,  // Validate file type
+                'mimes' => $this->container->get('allowed_video_mime_types'),
+            ];
+
+            // Handle upload with WordPress security validation
+            $uploaded_file = wp_handle_upload($_FILES['video_file'], $upload_overrides);
+
+            if (isset($uploaded_file['error'])) {
+                throw new \InvalidArgumentException($uploaded_file['error']);
+            }
+
+            if (!isset($uploaded_file['file']) || !file_exists($uploaded_file['file'])) {
+                throw new \InvalidArgumentException(__('Upload error occurred', 'upload-field-to-youtube-for-acf'));
+            }
+
+            $field = get_field_object($field_key);
+            if (!$field) {
+                // Clean up uploaded file on error
+                wp_delete_file($uploaded_file['file']);
+
+                // translators: %s: field key value
+                throw new \InvalidArgumentException(\sprintf(__('Unable to retrieve field "%1$s"', 'upload-field-to-youtube-for-acf'), $field_key));
+            }
+
+            $this->do_action(__FUNCTION__.'_before', $post_id, $field, $uploaded_file);
+
+            // Prepare file data for YouTube upload
+            $video_file_data = [
+                'tmp_name' => $uploaded_file['file'],
+                'size' => filesize($uploaded_file['file']),
+                'type' => $uploaded_file['type'],
+                'name' => basename($uploaded_file['file']),
+            ];
+
+            // Upload to YouTube
+            $video_id = $this->youtube_api_service->upload_video_to_youtube($post_id, $field, $video_file_data);
+
+            // Update the field value
+            $field_saved = $this->save_video_id_to_field($video_id, $post_id, $field_key, false);
+
+            // Clean up temporary file after successful upload
+            wp_delete_file($uploaded_file['file']);
+
+            $this->do_action(__FUNCTION__.'_after', $video_id, $post_id, $field);
+
+            wp_send_json_success([
+                'video_id' => $video_id,
+                'message' => 'Video uploaded successfully',
+                'field_saved' => $field_saved, // Add flag to indicate field was already saved
+            ]);
+        } catch (\Google\Service\Exception $exception) {
+            // Clean up uploaded file on error
+            wp_delete_file($uploaded_file['file']);
+
+            $this->logger->error($exception, [
+                'post_id' => $post_id,
+            ]);
+            $error_data = json_decode($exception->getMessage(), true);
+            $error_message = $error_data['error']['message'] ?? $exception->getMessage();
+            $this->do_action(__FUNCTION__.'_error', $exception, $post_id, $field_key);
+            wp_send_json_error(['message' => $error_message]);
+        } catch (\Exception $exception) {
+            // Clean up uploaded file on error
+            if (isset($uploaded_file['file']) && file_exists($uploaded_file['file'])) {
+                wp_delete_file($uploaded_file['file']);
+            }
+
+            $this->logger->error($exception, [
+                'post_id' => $post_id ?? null,
+            ]);
+            $this->do_action(__FUNCTION__.'_error', $exception, $post_id ?? null, $field_key ?? null);
+            wp_send_json_error(['message' => $exception->getMessage()]);
+        }
+    }
+
+    /**
+     * Retrieve video ID from a recent upload by checking recently uploaded videos.
+     *
+     * This method searches for recently uploaded videos that might match
+     * the current upload session when the upload response is not readable.
+     *
+     * @throws \Exception if an error occurs during the retrieval process
+     */
+    public function wp_ajax_get_video_id_from_upload(): void
+    {
+        try {
+            // Verify nonce for security
+            if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'] ?? '')))) {
+                throw new \InvalidArgumentException(__('Security check failed', 'upload-field-to-youtube-for-acf'));
+            }
+
+            $upload_id = isset($_POST['upload_id']) ? sanitize_text_field(wp_unslash($_POST['upload_id'])) : '';
+            $post_id = isset($_POST['post_id']) ? (int) $_POST['post_id'] : 0;
+            $field_key = isset($_POST['field_key']) ? sanitize_text_field(wp_unslash($_POST['field_key'])) : '';
+
+            if (empty($upload_id) || empty($post_id) || empty($field_key)) {
+                throw new \InvalidArgumentException(__('Missing required parameters', 'upload-field-to-youtube-for-acf'));
+            }
+
+            $this->do_action(__FUNCTION__.'_before', $upload_id, $post_id, $field_key);
+
+            $video_id = $this->youtube_api_service->get_video_id_from_upload($upload_id);
+
+            if (!$video_id) {
+                throw new \UnexpectedValueException(__('Could not find recently uploaded video', 'upload-field-to-youtube-for-acf'));
+            }
+
+            update_field($field_key, $video_id, $post_id);
+
+            $this->logger->debug('Saved recent video ID', [
+                'video_id' => $video_id,
+                'upload_id' => $upload_id,
+                'post_id' => $post_id,
+                'field_key' => $field_key,
+            ]);
+
+            $this->do_action(__FUNCTION__.'_after', $video_id, $upload_id, $post_id, $field_key);
+
+            wp_send_json_success([
+                'video_id' => $video_id,
+                'message' => __('Video ID found and saved', 'upload-field-to-youtube-for-acf'),
+            ]);
+        } catch (\Exception $exception) {
+            $this->logger->error($exception, [
+                'video_id' => $video_id ?? null,
+                'upload_id' => $upload_id ?? null,
+                'post_id' => $post_id ?? null,
+                'field_key' => $field_key ?? null,
+            ]);
+            $this->do_action(__FUNCTION__.'_error', $exception, $video_id ?? null, $upload_id ?? null, $post_id ?? null, $field_key ?? null);
+            wp_send_json_error(['message' => $exception->getMessage()]);
+        }
+    }
+
+    /**
+     * Save YouTube video ID to the specified ACF field.
+     *
+     * This method updates the ACF field with the provided video ID
+     * after validating user permissions and field existence.
+     *
+     * @throws \Exception if an error occurs during the save process
+     */
     public function wp_ajax_save_youtube_video_id(): void
     {
         try {
+            // Verify nonce for security
+            if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'] ?? '')))) {
+                throw new \InvalidArgumentException(__('Security check failed', 'upload-field-to-youtube-for-acf'));
+            }
+
             $post_id = isset($_POST['post_id']) ? (int) $_POST['post_id'] : 0;
-            if (empty($post_id)) {
-                // translators: %s: post_id
-                throw new \InvalidArgumentException(\sprintf(__('Empty field "%1$s"', 'upload-field-to-youtube-for-acf'), 'post_id'));
-            }
+            $video_id = isset($_POST['video_id']) ? sanitize_text_field(wp_unslash($_POST['video_id'])) : '';
+            $field_key = isset($_POST['field_key']) ? sanitize_text_field(wp_unslash($_POST['field_key'])) : '';
 
-            $video_id = isset($_POST['video_id']) ? sanitize_text_field($_POST['video_id']) : '';
-            if (empty($video_id)) {
-                // translators: %s: video_id
-                throw new \InvalidArgumentException(\sprintf(__('Empty field "%1$s"', 'upload-field-to-youtube-for-acf'), 'video_id'));
-            }
+            $this->do_action(__FUNCTION__.'_before', $post_id, $video_id, $field_key);
 
-            if (!current_user_can('edit_post', $post_id)) {
-                // translators: %s: video_id
-                throw new \Exception(\sprintf(__('Insufficient permissions to save video "%1$s"', 'upload-field-to-youtube-for-acf'), $video_id));
-            }
+            $this->save_video_id_to_field($video_id, $post_id, $field_key);
 
-            $field_key = isset($_POST['field_key']) ? sanitize_text_field($_POST['field_key']) : '';
-            if (empty($field_key)) {
-                // translators: %s: field_key
-                throw new \InvalidArgumentException(\sprintf(__('Empty field "%1$s"', 'upload-field-to-youtube-for-acf'), 'field_key'));
-            }
-
-            $result = update_field($field_key, $video_id, $post_id);
-            if ($result) {
-                wp_send_json_success();
-            }
-
-            // translators: %1$s: video_id, %2$s: field_key, %3$d: post_id
-            throw new \UnexpectedValueException(\sprintf(__('Unable to save video "%1$s" to field "%2$s" in post ID "%3$d"', 'upload-field-to-youtube-for-acf'), $video_id, $field_key, $post_id));
+            $this->do_action(__FUNCTION__.'_after', $post_id, $video_id, $field_key);
+            wp_send_json_success();
         } catch (\Exception $exception) {
-            $this->log('error', $exception);
+            $this->logger->error($exception, [
+                'post_id' => $post_id ?? null,
+                'video_id' => $video_id ?? null,
+                'field_key' => $field_key ?? null,
+            ]);
+            $this->do_action(__FUNCTION__.'_error', $exception, $post_id ?? null, $video_id ?? null, $field_key ?? null);
             wp_send_json_error(['message' => $exception->getMessage()]);
         }
     }
 
+    /**
+     * Retrieve videos from a specific YouTube playlist.
+     *
+     * This method fetches videos from the specified playlist that match
+     * the field's privacy status setting.
+     *
+     * @throws \Exception if an error occurs during the retrieval process
+     */
     public function wp_ajax_get_videos_by_playlist(): void
     {
         try {
-            $field_key = isset($_POST['field_key']) ? sanitize_text_field($_POST['field_key']) : '';
+            // Verify nonce for security
+            if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'] ?? '')))) {
+                throw new \InvalidArgumentException(__('Security check failed', 'upload-field-to-youtube-for-acf'));
+            }
+
+            $field_key = isset($_POST['field_key']) ? sanitize_text_field(wp_unslash($_POST['field_key'])) : '';
             if (empty($field_key)) {
-                // translators: %s: field_key
+                // translators: %s: field name (field_key)
                 throw new \InvalidArgumentException(\sprintf(__('Empty field "%1$s"', 'upload-field-to-youtube-for-acf'), 'field_key'));
             }
 
             // https://support.advancedcustomfields.com/forums/topic/get-choices-from-field-without-post_id/
             $field = get_field_object($field_key);
             if (!$field) {
-                // translators: %s: field_key
+                // translators: %s: field key value
                 throw new \InvalidArgumentException(\sprintf(__('Unable to retrieve field "%1$s"', 'upload-field-to-youtube-for-acf'), $field_key));
             }
 
-            $playlist_id = isset($_POST['playlist_id']) ? sanitize_text_field($_POST['playlist_id']) : '';
+            $playlist_id = isset($_POST['playlist_id']) ? sanitize_text_field(wp_unslash($_POST['playlist_id'])) : '';
             if (empty($playlist_id)) {
-                // translators: %s: playlist_id
+                // translators: %s: field name (playlist_id)
                 throw new \InvalidArgumentException(\sprintf(__('Empty field "%1$s"', 'upload-field-to-youtube-for-acf'), 'playlist_id'));
             }
 
-            $this->check_oauth_token();
-            $googleServiceYouTube = new \Google_Service_YouTube($this->get_google_client());
-            $params = [
-                'playlistId' => $playlist_id,
-                'maxResults' => 50,
-            ];
+            $this->do_action(__FUNCTION__.'_before', $field_key, $field, $playlist_id);
 
-            // Quota impact: A call to this method has a quota cost of 1 unit.
-            $response = $googleServiceYouTube->playlistItems->listPlaylistItems('snippet,status', $params);
+            $result = $this->youtube_api_service->get_videos_by_playlist($playlist_id, $field['privacy_status']);
 
-            // translators: %s: playlist_id
-            $this->log('debug', \sprintf(__('Videos retrieved successfully by playlist ID "%1$s"', 'upload-field-to-youtube-for-acf'), $playlist_id), [
-                'privacy_status' => $field['privacy_status'],
-                'response' => $response,
-            ]);
-
-            $result = [];
-            foreach ($response->getItems() as $item) {
-                $videoId = $item->getSnippet()->getResourceId()->getVideoId();
-                if (!isset($result[$videoId])) {
-                    $status = $item->getStatus();
-                    if ($status && $status->getPrivacyStatus() === $field['privacy_status']) {
-                        $result[$videoId] = [
-                            'id' => $videoId,
-                            'title' => $item->getSnippet()->getTitle(),
-                        ];
-                    }
-                }
+            if (!$result) {
+                // translators: %s: playlist ID value
+                throw new \UnexpectedValueException(\sprintf(__('Unable to retrieve videos by playlist ID "%1$s"', 'upload-field-to-youtube-for-acf'), $playlist_id));
             }
 
-            if ($result) {
-                $result = [
-                    'items' => array_values($result),
-                ];
-
-                if (!empty($nextPageToken = $response->getNextPageToken())) {
-                    $result['nextPageToken'] = $nextPageToken;
-                }
-
-                wp_send_json_success($result);
-            }
-
-            // translators: %s: playlist_id
-            throw new \UnexpectedValueException(\sprintf(__('Unable to retrieve videos by playlist ID "%1$s"', 'upload-field-to-youtube-for-acf'), $playlist_id));
+            $this->do_action(__FUNCTION__.'_after', $field_key, $field, $playlist_id, $result);
+            wp_send_json_success($result);
         } catch (\UnexpectedValueException $exception) {
             // FIXED - https://github.com/inpsyde/Wonolog/blob/2.x/src/HookLogFactory.php#L135
             // use `$exception->getMessage()` instead of `$exception`, because Wonolog
             // assigns the ERROR level to messages that are instances of Throwable
-            $this->log('warning', $exception->getMessage());
+            $this->logger->warning($exception->getMessage(), [
+                'exception' => $exception,
+                'field_key' => $field_key,
+                'field' => $field,
+                'playlist_id' => $playlist_id,
+            ]);
+            $this->do_action(__FUNCTION__.'_error', $exception, $field_key, $field, $playlist_id);
             wp_send_json_error(['message' => $exception->getMessage()]);
         } catch (\Exception $exception) {
-            $this->log('error', $exception);
+            $this->logger->error($exception, [
+                'field_key' => $field_key ?? null,
+                'field' => $field ?? null,
+                'playlist_id' => $playlist_id ?? null,
+                'result' => $result ?? null,
+            ]);
+            $this->do_action(__FUNCTION__.'_error', $exception, $field_key ?? null, $field ?? null, $playlist_id ?? null, $result ?? null);
             wp_send_json_error(['message' => $exception->getMessage()]);
         }
     }
 
-    public function log($level, $message, array $context = []): void
+    /**
+     * Get cron status information for debugging.
+     *
+     * @return array<string, mixed> associative array with cron status details
+     */
+    public function get_cron_status(): array
     {
-        if ($this->is_wonolog_active()) {
-            do_action('wonolog.log.'.$level, $message, $context);
-        } else {
-            if ($message instanceof \Throwable) {
-                $message = $message->getMessage();
-            } elseif (is_wp_error($message)) {
-                $context['wp_error_data'] = $message->get_error_data();
-                $message = $message->get_error_message();
-            }
+        $hook = $this->get_cron_hook();
+        $schedule = $this->get_cron_schedule();
+        $next_run = wp_next_scheduled($hook);
 
-            if (\is_array($message)) {
-                $message = 'Message: '.wp_json_encode($message);
-            }
+        $status = [
+            'hook' => $hook,
+            'schedule' => $schedule,
+            'default_schedule' => $this->env['cron_schedule'],
+            'is_scheduled' => (bool) $next_run,
+            'next_run' => $next_run,
+            'next_run_formatted' => $next_run ? wp_date('Y-m-d H:i:s', $next_run) : null,
+            'available_schedules' => array_keys(wp_get_schedules()),
+            'env_debug' => $this->env['debug'],
+        ];
 
-            if (!empty($context)) {
-                $message .= ' | Context: '.wp_json_encode($context);
-            }
-
-            error_log($message);
-        }
+        // Allow third parties to add info
+        return $this->apply_filters(__FUNCTION__.'_status', $status);
     }
 
-    public function is_wonolog_active()
+    /**
+     * Save video ID to ACF field with validation.
+     *
+     * @param string $video_id          The YouTube video ID
+     * @param int    $post_id           The WordPress post ID
+     * @param string $field_key         The ACF field key
+     * @param bool   $check_permissions Whether to check edit permissions
+     *
+     * @return bool True on success
+     *
+     * @throws \InvalidArgumentException For invalid arguments
+     * @throws \RuntimeException         For permission or save errors
+     */
+    private function save_video_id_to_field(string $video_id, int $post_id, string $field_key, bool $check_permissions = true): bool
     {
-        return \function_exists('did_action') && class_exists(Configurator::class) && \defined(Configurator::class.'::ACTION_SETUP') && did_action(Configurator::ACTION_SETUP);
+        if (empty($video_id)) {
+            // translators: %s: field name (video_id)
+            throw new \InvalidArgumentException(\sprintf(esc_html__('Empty field "%1$s"', 'upload-field-to-youtube-for-acf'), 'video_id'));
+        }
+
+        if (empty($post_id)) {
+            // translators: %s: field name (post_id)
+            throw new \InvalidArgumentException(\sprintf(esc_html__('Empty field "%1$s"', 'upload-field-to-youtube-for-acf'), 'post_id'));
+        }
+
+        if (empty($field_key)) {
+            // translators: %s: field name (field_key)
+            throw new \InvalidArgumentException(\sprintf(esc_html__('Empty field "%1$s"', 'upload-field-to-youtube-for-acf'), 'field_key'));
+        }
+
+        if ($check_permissions && !current_user_can('edit_post', $post_id)) {
+            // translators: %s: video ID value
+            throw new \RuntimeException(\sprintf(esc_html__('Insufficient permissions to save video "%1$s"', 'upload-field-to-youtube-for-acf'), esc_html($video_id)));
+        }
+
+        $this->do_action(__FUNCTION__.'_before', $post_id, $video_id, $field_key);
+
+        $this->logger->debug('Saving video ID to field', [
+            'video_id' => $video_id,
+            'post_id' => $post_id,
+            'field_key' => $field_key,
+        ]);
+
+        $result = update_field($field_key, $video_id, $post_id);
+
+        if (!$result) {
+            throw new \RuntimeException(esc_html__('Unable to save video', 'upload-field-to-youtube-for-acf'));
+        }
+
+        $this->do_action(__FUNCTION__.'_after', $post_id, $video_id, $field_key);
+
+        return true;
+    }
+
+    /**
+     * Get the cron schedule for OAuth token checks.
+     *
+     * @return string the cron schedule identifier
+     *
+     * @throws \Exception if an error occurs while retrieving the schedule
+     */
+    private function get_cron_schedule(): string
+    {
+        // Allow customization via filter
+        $schedule = $this->apply_filters(__FUNCTION__.'_cron_schedule', $this->env['cron_schedule']);
+
+        // Validate schedule exists in WordPress
+        $schedules = wp_get_schedules();
+        if (!isset($schedules[$schedule])) {
+            $this->logger->warning('Invalid cron schedule specified, falling back to daily', [
+                'requested_schedule' => $schedule,
+                'available_schedules' => array_keys($schedules),
+                'default_schedule' => $this->env['cron_schedule'],
+            ]);
+            $schedule = 'daily';
+        }
+
+        return $schedule;
+    }
+
+    /**
+     * Get the cron hook name.
+     *
+     * @return string the cron hook name
+     */
+    private function get_cron_hook(): string
+    {
+        return $this->get_hook_prefix().'check_oauth_token';
     }
 
     /**
@@ -1196,8 +1503,8 @@ class Field extends \acf_field
     {
         // Define migrations: old_key => new_key
         $option_migrations = [
-            FRUGAN_UFTYFACF_NAME.'__access_token' => $this->name.'__access_token',
-            FRUGAN_UFTYFACF_NAME.'__activated' => $this->name.'__activated',
+            $this->container->get('plugin_name').'__access_token' => $this->get_hook_prefix().'access_token',
+            $this->container->get('plugin_name').'__activated' => $this->get_hook_prefix().'activated',
         ];
 
         // Migrate options
@@ -1207,7 +1514,7 @@ class Field extends \acf_field
 
         // Migrate scheduled events: old_hook => new_hook
         $hook_migrations = [
-            FRUGAN_UFTYFACF_NAME.'__check_oauth_token' => $this->name.'__check_oauth_token',
+            $this->container->get('plugin_name').'__check_oauth_token' => $this->get_cron_hook(),
         ];
 
         // Migrate scheduled events

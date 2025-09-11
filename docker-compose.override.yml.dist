@@ -16,3 +16,6 @@
   #    #VIPS_NOVECTOR: true
   #    #https://stackoverflow.com/a/52479399/3929620
   #    #NODE_TLS_REJECT_UNAUTHORIZED: 0
+  #    #https://github.com/eslint/eslint/discussions/18484#discussioncomment-9516248
+  #    ESLINT_USE_FLAT_CONFIG: false
+  #    VITE_HMR_CLIENT_PORT: ${NODE_PORT:-3000}

@@ -1,6 +1,0 @@
-{
-  "unreleased": true,
-  "commitLimit": false,
-  "template": "auto-changelog.hbs",
-  "output": "CHANGELOG.md"
-}

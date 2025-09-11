@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.6/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         cacheDirectory=".phpunit.cache"
+         executionOrder="depends,defects"
+         beStrictAboutOutputDuringTests="true"
+         beStrictAboutTodoAnnotatedTests="true"
+         beStrictAboutResourceUsageDuringSmallTests="true"
+         failOnRisky="true"
+         failOnWarning="true">
+    <coverage>
+        <include>
+            <directory>src</directory>
+            <directory>include</directory>
+        </include>
+    </coverage>
+    <testsuites>
+        <testsuite name="Unit Tests">
+            <directory>tests</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>src</directory>
+            <directory>include</directory>
+        </include>
+    </source>
+    <groups>
+        <exclude>
+            <group>fixme</group>
+        </exclude>
+    </groups>
+    <php>
+        <!-- Environment variables for tests -->
+        <env name="WP_DEBUG" value="false"/>
+        <env name="WP_ENV" value="testing"/>
+        <env name="WPSPAGHETTI_UFTYFACF_BUILDER_CACHE_ENABLED" value="false"/>
+        
+        <!-- Constants for WordPress -->
+        <const name="ABSPATH" value="/tmp/wordpress/"/>
+        <const name="WP_CONTENT_DIR" value="/tmp/wp-content"/>
+        <const name="WPMU_PLUGIN_DIR" value="/tmp/wp-content/mu-plugins"/>
+        
+        <!-- Plugin constants -->
+        <const name="WPSPAGHETTI_UFTYFACF_VERSION" value="0.1.0"/>
+        <const name="WPSPAGHETTI_UFTYFACF_BASENAME" value="upload-field-to-youtube-for-acf/upload-field-to-youtube-for-acf.php"/>
+        <const name="WPSPAGHETTI_UFTYFACF_NAME" value="upload-field-to-youtube-for-acf"/>
+        <const name="WPSPAGHETTI_UFTYFACF_UNDERNAME" value="upload_field_to_youtube_for_acf"/>
+        <const name="WPSPAGHETTI_UFTYFACF_URL" value="http://example.com/wp-content/plugins/upload-field-to-youtube-for-acf/"/>
+        <const name="WPSPAGHETTI_UFTYFACF_PATH" value="/tmp/wp-content/plugins/upload-field-to-youtube-for-acf/"/>
+
+        <ini name="mockery.enable_strict" value="false"/>
+        <ini name="mockery.disable_warnings" value="true"/>
+        <env name="MOCKERY_CONTAINER_STRICT" value="false"/>
+    </php>
+</phpunit>
