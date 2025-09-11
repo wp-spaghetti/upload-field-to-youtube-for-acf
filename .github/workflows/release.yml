@@ -93,6 +93,7 @@ jobs:
         run: |
           crowdin download --all
           echo "Downloaded translations from Crowdin"
+        working-directory: ./${{ github.event.repository.name }}
         env:
           CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
           CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
@@ -102,6 +103,7 @@ jobs:
           sudo apt-get update && sudo apt-get install -y gettext
           find languages/ -name "*.po" -exec sh -c 'msgfmt "$0" -o "${0%.po}.mo"' {} \;
           echo "Converted PO files to MO format"
+        working-directory: ./${{ github.event.repository.name }}
 
       - name: Check if translations were downloaded
         id: check
@@ -111,6 +113,7 @@ jobs:
           else
             echo "translations_available=false" >> $GITHUB_OUTPUT
           fi
+        working-directory: ./${{ github.event.repository.name }}
 
       - name: Upload translations artifact
         if: steps.check.outputs.translations_available == 'true'
