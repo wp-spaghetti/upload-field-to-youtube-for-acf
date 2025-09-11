@@ -40,7 +40,7 @@
         "wp-spaghetti/wp-vite": "^1.0"
     },
     "require-dev": {
-        "10up/wp_mock": "^0.4.2",
+        "10up/wp_mock": "^1.1.0",
         "composer/installers": "^1.0 || ^2.0",
         "ergebnis/composer-normalize": "^2.42",
         "friendsofphp/php-cs-fixer": "^3.86",
