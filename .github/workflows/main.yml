@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - develop
       - 'support/*'
   pull_request:
     branches:
@@ -59,7 +58,7 @@ jobs:
 
     - name: Run Makefile 'qa' task
       run: |
-        make qa \
+        make qa ci \
           PLUGIN_NAME=${{ github.event.repository.name }}
 
     - name: Run Makefile 'qa test:coverage' task

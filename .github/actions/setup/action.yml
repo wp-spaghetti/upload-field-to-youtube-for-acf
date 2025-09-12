@@ -89,7 +89,7 @@ runs:
     #      sleep 5
     #      timeout=$((timeout - 5))
     #    done
-    #    [ $timeout -gt 0 ] || { echo "Error: Timeout reached, wp-config.php not found"; exit 1; }
+    #    [ $timeout -gt 0 ] || { echo "❌ Error: Timeout reached, wp-config.php not found"; exit 1; }
 
     # method #2
     - name: Wait for WordPress setup to complete

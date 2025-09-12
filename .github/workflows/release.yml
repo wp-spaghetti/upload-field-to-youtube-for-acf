@@ -62,70 +62,16 @@ jobs:
           if [ -n "$VERSION" ]; then
             echo "version=${VERSION#v}" >> $GITHUB_OUTPUT
             echo "released=true" >> $GITHUB_OUTPUT
+            echo "✅ New version to release: ${VERSION#v}"
           else
             echo "released=false" >> $GITHUB_OUTPUT
+            echo "❌ No new version to release"
           fi
-
-  # Download translations from Crowdin for releases
-  crowdin_download:
-    name: Download Translations
-    runs-on: ubuntu-latest
-    needs: release
-    if: needs.release.outputs.released == 'true'
-    outputs:
-      translations_available: ${{ steps.check.outputs.translations_available }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-        with:
-          ref: v${{ needs.release.outputs.version }}
-
-      - name: Setup environment
-        uses: ./.github/actions/setup
-        with:
-          mariadb_tag: latest
-          wordpress_tag: latest
-          node_tag: 22
-          plugin_name: ${{ github.event.repository.name }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download translations from Crowdin
-        run: make crowdin-download
-        env:
-          CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
-          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
-
-      - name: Convert PO to MO files
-        run: make crowdin-build-mo
-
-      - name: Check if translations were downloaded
-        id: check
-        run: |
-          if [ -n "$(find ${{ github.event.repository.name }}/languages/ -name "*.mo" -print -quit)" ]; then
-            echo "translations_available=true" >> $GITHUB_OUTPUT
-          else
-            echo "translations_available=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Upload translations artifact
-        if: steps.check.outputs.translations_available == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: translations
-          path: ${{ github.event.repository.name }}/languages/
-          retention-days: 1
-          if-no-files-found: ignore
-
-      - name: Shutdown environment
-        uses: ./.github/actions/shutdown
-        with:
-          cleanup_mode: basic
 
   deploy:
     name: Deploy Release
     runs-on: ubuntu-latest
-    needs: [release, crowdin_download]
+    needs: release
     if: needs.release.outputs.released == 'true'
 
     steps:
@@ -136,13 +82,6 @@ jobs:
           fetch-tags: true
           ref: v${{ needs.release.outputs.version }}
 
-      - name: Download translations
-        if: needs.crowdin_download.outputs.translations_available == 'true'
-        uses: actions/download-artifact@v5
-        with:
-          name: translations
-          path: ${{ github.event.repository.name }}/languages/
-
       - name: Setup environment
         uses: ./.github/actions/setup
         with:
@@ -152,19 +91,20 @@ jobs:
           plugin_name: ${{ github.event.repository.name }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install svn
-        run: sudo apt-get install subversion
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y gettext subversion
 
       #https://github.com/orgs/community/discussions/25641#discussioncomment-3248571
       - name: Run Makefile 'deploy' task
         run: |
           make deploy \
-            MODE=production \
             PLUGIN_NAME=${{ github.event.repository.name }} \
             PLUGIN_VERSION=${{ needs.release.outputs.version }} \
             GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
             SVN_USERNAME=${{ secrets.SVN_USERNAME }} \
-            SVN_PASSWORD=${{ secrets.SVN_PASSWORD }}
+            SVN_PASSWORD=${{ secrets.SVN_PASSWORD }} \
+            CROWDIN_PROJECT_ID=${{ secrets.CROWDIN_PROJECT_ID }} \
+            CROWDIN_PERSONAL_TOKEN=${{ secrets.CROWDIN_PERSONAL_TOKEN }}
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v2

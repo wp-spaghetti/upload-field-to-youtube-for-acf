@@ -1,8 +1,20 @@
-# Manual workflow to upload source files to Crowdin
 name: Upload Sources to Crowdin
 
 on:
-  workflow_dispatch: # Manual trigger only
+  # Manual trigger for full control
+  workflow_dispatch:
+    inputs:
+      force_upload:
+        description: 'Force upload even if no changes detected'
+        required: false
+        default: false
+        type: boolean
+
+  # Automatic trigger when translation files are modified
+  push:
+    branches: [main, develop]
+    paths:
+      - '${{ github.event.repository.name }}/languages/*.pot'
 
 permissions:
   contents: read
@@ -15,6 +27,27 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 2 # Need to check for changes
+
+      - name: Check for relevant changes
+        id: changes
+        if: github.event_name == 'push'
+        run: |
+          # Check if any translation-related files changed
+          if git diff --name-only HEAD~1 HEAD | grep -E '\.pot)$' > /dev/null; then
+            echo "changes_detected=true" >> $GITHUB_OUTPUT
+            echo "✅ Translation-related files detected"
+          else
+            echo "changes_detected=false" >> $GITHUB_OUTPUT
+            echo "❌ No translation-related changes detected"
+          fi
+
+      - name: Skip upload if no changes
+        if: github.event_name == 'push' && steps.changes.outputs.changes_detected == 'false'
+        run: |
+          echo "❌ Skipping Crowdin upload - no relevant changes detected"
+          exit 0
 
       - name: Setup environment
         uses: ./.github/actions/setup
