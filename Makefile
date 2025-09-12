@@ -307,10 +307,12 @@ ifeq ($(GITHUB_ACTIONS),true)
 		if [ -n "$(SVN_USERNAME)" ] && [ -n "$(SVN_PASSWORD)" ]; then \
 			echo "Deploying to WordPress SVN"; \
 			svn $(SVN_AUTH) checkout https://plugins.svn.wordpress.org/$(PLUGIN_NAME)/ $(TMP_DIR)/$(SVN_DIR); \
-			if [[ "$(CURRENT_BRANCH)" != support/* ]]; then \
+			if [ "$(CURRENT_BRANCH)" != support/* ]; then \
 				echo "Deploying to trunk and assets"; \
 				rsync -av --delete $(DIST_DIR)/$(PLUGIN_NAME)/ $(TMP_DIR)/$(SVN_DIR)/trunk/; \
 				rsync -av --delete $(SVN_ASSETS_DIR)/ $(TMP_DIR)/$(SVN_DIR)/assets/; \
+			else \
+				echo "❌ Support branch detected, skipping..."; \
 			fi; \
 			if [ ! -d "$(TMP_DIR)/$(SVN_DIR)/tags/$(PLUGIN_VERSION)" ]; then \
 				echo "Creating tag v$(PLUGIN_VERSION)"; \
@@ -336,12 +338,12 @@ endif
 
 crowdin-upload: setup
 ifneq ($(and $(CROWDIN_PROJECT_ID),$(CROWDIN_PERSONAL_TOKEN)),)
-	@if [[ "$(CURRENT_BRANCH)" != support/* ]]; then \
+	@if [ "$(CURRENT_BRANCH)" != "support/*" ]; then \
 		echo "[node] Uploading sources to Crowdin"; \
 		$(DOCKER_COMPOSE) exec -u$(NODE_CONTAINER_USER) $(NODE_CONTAINER_NAME) sh -c 'cd $(NODE_CONTAINER_WORKSPACE_DIR)/$(PLUGIN_NAME) && npm run crowdin:upload'; \
 		echo "✅ Sources uploaded to Crowdin"; \
 	else \
-		echo "❌ Current branch is a support branch, skipping..."; \
+		echo "❌ Support branch detected, skipping..."; \
 	fi
 else
 	@echo "❌ CROWDIN_PROJECT_ID or CROWDIN_PERSONAL_TOKEN not set, skipping..."
@@ -349,7 +351,7 @@ endif
 
 crowdin-download: setup
 ifneq ($(and $(CROWDIN_PROJECT_ID),$(CROWDIN_PERSONAL_TOKEN)),)
-	@if [[ "$(CURRENT_BRANCH)" != support/* ]]; then \
+	@if [ "$(CURRENT_BRANCH)" != "support/*" ]; then \
 		echo "[node] Downloading translations from Crowdin"; \
 		$(DOCKER_COMPOSE) exec -u$(NODE_CONTAINER_USER) $(NODE_CONTAINER_NAME) sh -c 'cd $(NODE_CONTAINER_WORKSPACE_DIR)/$(PLUGIN_NAME) && npm run crowdin:download'; \
 		echo "✅ Translations downloaded from Crowdin"; \
@@ -393,7 +395,7 @@ clean-node:
 clean-wordpress: 
 	@echo "[wordpress] Cleaning artifacts"
 	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'if [ -d "$${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/plugins/$(PLUGIN_NAME)" ]; then cd $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/plugins/$(PLUGIN_NAME) && rm -rf .git vendor composer.lock; fi'
-	@rm -rf $(DIST_DIR)/*
+	@rm -rf $(DIST_DIR)
 
 down: 
 	@echo "Stopping docker compose services"
