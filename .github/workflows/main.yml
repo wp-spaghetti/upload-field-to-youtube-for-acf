@@ -1,15 +1,24 @@
 name: CI
 
 on:
-  push:
-    branches:
-      - main
-      - 'support/*'
+  # Run tests on PR
   pull_request:
     branches:
       - main
       - develop
       - 'support/*'
+
+  # Optional: Only for post-merge verification (after PR is already approved).
+  # Note: PR merge is technically a "push", so this trigger will fire after successful merges.
+  # In a proper PR/GitHub workflow, protected branches should only receive PR merges.
+  # This trigger only makes sense for:
+  # - Hotfixes that bypass PR workflow in emergencies
+  # - Unprotected branches that still accept direct pushes (not recommended)
+  # - Post-merge verification (redundant if PR tests passed)
+  # Remove this entirely if all branches are properly protected with required PR reviews.
+  # push:
+  #   branches:
+  #     - develop
 
 jobs:
   test:
