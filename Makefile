@@ -249,7 +249,7 @@ endif
 	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'wp rewrite flush --allow-root'
 
 	@echo "[wordpress] Changing data folder ownership"
-# avoids write permission errors when PHP writes w/ 1001 user
+# Avoids write permission errors when PHP writes w/ 1001 user
 	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'chmod -Rf o+w /tmp/$(PLUGIN_NAME)-plugin/tests/data/wp-cfm || true'
 
 	@echo "[wordpress] Changing other plugins folders ownership"
@@ -257,9 +257,6 @@ endif
 	
 	@echo "[wordpress] Changing wp-config.php permissions"
 	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'chmod 666 $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-config.php || true'
-
-	@echo "[wordpress] Changing dist folder permissions"
-	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'chmod -Rf 777 /tmp/dist || true'
 
 	@echo "[wordpress] Redirecting debug.log to stderr"
 	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'rm -f $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/debug.log && ln -sfn /dev/stderr $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/debug.log || true'
@@ -284,6 +281,8 @@ qa-wordpress:
 
 deploy-zip:
 	@echo "Deploying to zip file"
+# Fix permission, because DIST_DIR is mounted as a volume by docker-compose
+	@chmod 755 $(DIST_DIR) 2>/dev/null || true
 	@mkdir -p $(DIST_DIR)/$(PLUGIN_NAME)
 	@cd $(PLUGIN_NAME) && rsync -av --delete --exclude-from=exclude_from.txt --include-from=include_from.txt . ../$(DIST_DIR)/$(PLUGIN_NAME)/
 
