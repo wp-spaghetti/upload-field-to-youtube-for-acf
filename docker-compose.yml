@@ -74,6 +74,8 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       DEBUG: ${NODE_DEBUG:-}
       LOG_LEVEL: ${NODE_LOG_LEVEL:-}
+      CROWDIN_PROJECT_ID: ${CROWDIN_PROJECT_ID:-}
+      CROWDIN_PERSONAL_TOKEN: ${CROWDIN_PERSONAL_TOKEN:-}
 
   phpmyadmin:
     container_name: phpmyadmin

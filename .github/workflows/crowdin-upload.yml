@@ -16,17 +16,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
+      - name: Setup environment
+        uses: ./.github/actions/setup
         with:
-          node-version: 'lts/*'
-
-      - name: Install Crowdin CLI
-        run: npm install -g @crowdin/cli
+          mariadb_tag: latest
+          wordpress_tag: latest
+          node_tag: 22
+          plugin_name: ${{ github.event.repository.name }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload sources to Crowdin
-        run: crowdin upload sources
-        working-directory: ./${{ github.event.repository.name }}
+        run: make crowdin-upload
         env:
           CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
           CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+
+      - name: Shutdown environment
+        uses: ./.github/actions/shutdown
+        with:
+          cleanup_mode: basic

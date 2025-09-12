@@ -1,6 +1,6 @@
 #https://stackoverflow.com/a/44061904/3929620
 # 1. Minimal approach - direct entry points only
-.PHONY: all setup check up install dev qa deploy changelog down help
+.PHONY: all setup check up install dev qa deploy crowdin-upload crowdin-download crowdin-build-mo changelog down help
 
 # 2. Purist approach - all entry points (technically correct)
 #.PHONY: (all entry points)
@@ -112,6 +112,7 @@ check:
 	@command -v git >/dev/null 2>&1 || { echo >&2 "❌ git is required but not installed. Aborting."; exit 1; }
 	@command -v rsync >/dev/null 2>&1 || { echo >&2 "❌ rsync is required but not installed. Aborting."; exit 1; }
 	@command -v zip >/dev/null 2>&1 || { echo >&2 "❌ zip is required but not installed. Aborting."; exit 1; }
+	@command -v msgfmt >/dev/null 2>&1 || { echo >&2 "❌ msgfmt is required but not installed. Aborting."; exit 1; }
 ifeq ($(and $(GITHUB_ACTIONS),$(MODE)),true production)
 	@command -v svn >/dev/null 2>&1 || { echo >&2 "❌ svn is required but not installed. Aborting."; exit 1; }
 endif
@@ -326,6 +327,22 @@ deploy-svn:
 		echo "❌ SVN repository does not exist yet. Skipping SVN deployment."; \
 	fi
 
+crowdin-upload: setup
+	@echo "[node] Uploading sources to Crowdin"
+	@$(DOCKER_COMPOSE) exec -u$(NODE_CONTAINER_USER) $(NODE_CONTAINER_NAME) sh -c 'cd $(NODE_CONTAINER_WORKSPACE_DIR)/$(PLUGIN_NAME) && npm run crowdin:upload'
+	@echo "✅ Sources uploaded to Crowdin"
+
+crowdin-download: setup
+	@echo "[node] Downloading translations from Crowdin"
+	@$(DOCKER_COMPOSE) exec -u$(NODE_CONTAINER_USER) $(NODE_CONTAINER_NAME) sh -c 'cd $(NODE_CONTAINER_WORKSPACE_DIR)/$(PLUGIN_NAME) && npm run crowdin:download'
+	@echo "✅ Translations downloaded from Crowdin"
+
+crowdin-build-mo: setup
+	@echo "Converting PO to MO files"
+	@command -v msgfmt >/dev/null 2>&1 || { echo "❌ Error: msgfmt not found. Please install gettext package."; exit 1; }
+	@find $(PLUGIN_NAME)/languages/ -name "*.po" -exec sh -c 'msgfmt "$$0" -o "$${0%.po}.mo"' {} \;
+	@echo "✅ PO files converted to MO format"
+
 changelog:
 	@echo "[node] Initializing changelog with historical releases"
 	@$(DOCKER_COMPOSE) exec -u$(NODE_CONTAINER_USER) $(NODE_CONTAINER_NAME) sh -c 'cd $(NODE_CONTAINER_WORKSPACE_DIR) && \
@@ -396,6 +413,11 @@ help:
 	@echo "  deploy            - Start environment, install dependencies and deploy to $(MODE)"
 	@echo "  changelog    	   - Generate CHANGELOG.md with historical releases from git tags
 	@echo "  down              - Stop environment"
+	@echo ""
+	@echo "Translation Management:"
+	@echo "  crowdin-upload    - Upload source files (.pot) to Crowdin"
+	@echo "  crowdin-download  - Download translations (.po) from Crowdin"
+	@echo "  crowdin-build-mo  - Convert PO files to MO format"
 	@echo ""
 	@echo "Quality Assurance:"
 	@echo "  qa                - Run all checks (default: composer check)"

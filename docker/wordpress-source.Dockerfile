@@ -126,6 +126,9 @@ RUN { \
         # Method #2
         #echo 'sendmail_path = "/usr/bin/msmtp -f noreply@localhost"'; \
         #echo 'sendmail_path = "/usr/bin/nullmailer-inject -f noreply@localhost"'; \
+        # Available in bitnami/wordpress, but not actived
+        echo 'zend_extension = xdebug'; \
+        echo 'xdebug.mode = coverage'; \
     } >> /opt/bitnami/php/etc/php.ini
 
 USER 1001
