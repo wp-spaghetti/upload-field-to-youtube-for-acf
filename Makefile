@@ -1,6 +1,6 @@
 #https://stackoverflow.com/a/44061904/3929620
 # 1. Minimal approach - direct entry points only
-.PHONY: all setup check up install dev qa deploy crowdin-upload crowdin-download crowdin-build-mo changelog down mta help
+.PHONY: all setup check up install dev qa deploy-ci deploy crowdin-upload crowdin-download crowdin-build-mo changelog down mta help
 
 # 2. Purist approach - all entry points (technically correct)
 #.PHONY: (all entry points)
@@ -37,7 +37,7 @@ WORDPRESS_MTA ?=
 
 NODE_TAG ?= latest
 NODE_PORT ?= 1337
-NODE_ENV ?= develop
+NODE_ENV ?= development
 NODE_DEBUG ?=
 NODE_LOG_LEVEL ?=
 
@@ -102,7 +102,9 @@ dev: setup dev-node
 
 qa: setup qa-node qa-wordpress
 
-deploy: install crowdin-download crowdin-build-mo deploy-zip deploy-svn
+deploy-ci: crowdin-download crowdin-build-mo deploy-zip deploy-svn
+
+deploy: install deploy-ci
 
 check:
 	@echo "Checking requirements"
@@ -223,7 +225,7 @@ endif
 # `extra.installer-paths."../{$name}/"` in the composer.json seems to be sufficient, while with PHP 8.x it is not.
 # Adding Composer's `--working-dir` option with PHP 8.x doesn't work.
 # For this reason, the absolute path `extra.installer-paths` had to be specified in the composer.json.
-ifneq ($(or $(filter true,$(GITHUB_ACTIONS)),$(filter production,$(MODE))),)
+ifeq ($(MODE),production)
 # To force a certain version of php you can use:
 # composer config platform.php 8.0 && <composer command> && composer config --unset platform.php
 	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'cd $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/plugins/$(PLUGIN_NAME) && composer install --optimize-autoloader --classmap-authoritative --no-dev --no-interaction'

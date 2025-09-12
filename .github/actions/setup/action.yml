@@ -2,6 +2,10 @@ name: 'Setup Development Environment'
 description: 'Setup Docker, WordPress and dependencies'
 
 inputs:
+  mode:
+    description: 'Mode: production or develop'
+    required: false
+    default: 'develop'
   mariadb_tag:
     description: 'MariaDB tag'
     required: false
@@ -100,6 +104,7 @@ runs:
       shell: bash
       run: |
         make install \
+          MODE=${{ inputs.mode }} \
           MARIADB_TAG=${{ inputs.mariadb_tag }} \
           WORDPRESS_TAG=${{ inputs.wordpress_tag }} \
           NODE_TAG=${{ inputs.node_tag }} \
