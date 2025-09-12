@@ -8,6 +8,12 @@
          beStrictAboutOutputDuringTests="true"
          failOnRisky="true"
          failOnWarning="true">
+    <coverage>
+        <include>
+            <directory>src</directory>
+            <directory>include</directory>
+        </include>
+    </coverage>
     <testsuites>
         <testsuite name="Unit Tests">
             <directory>tests</directory>

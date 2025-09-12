@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - develop
       - 'support/*'
   pull_request:
     branches:
@@ -45,20 +44,21 @@ jobs:
         plugin_name: ${{ github.event.repository.name }}
         github_token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Setup PHPUnit config
-      run: |
-        cd ${{ github.event.repository.name }}/
-        if [[ $(printf '%s\n' "${{ matrix.wordpress_tag }}" "5.9.3" | sort -V | head -n1) == "${{ matrix.wordpress_tag }}" ]]; then
-          cp phpunit-9.xml.dist phpunit.xml.dist
-          echo "Using PHPUnit 9 config for Wordpress ${{ matrix.wordpress_tag }}"
-        elif [[ $(printf '%s\n' "${{ matrix.wordpress_tag }}" "6.1.1" | sort -V | head -n1) == "${{ matrix.wordpress_tag }}" ]]; then
-          cp phpunit-10.xml.dist phpunit.xml.dist
-          echo "Using PHPUnit 10 config for Wordpress ${{ matrix.wordpress_tag }}"
-        fi
+    # 10up/wp_mock 1.1.0 requires phpunit/phpunit ^9.6
+    #- name: Setup PHPUnit config
+    #  run: |
+    #    cd ${{ github.event.repository.name }}/
+    #    if [[ $(printf '%s\n' "${{ matrix.wordpress_tag }}" "5.9.3" | sort -V | head -n1) == "${{ matrix.wordpress_tag }}" ]]; then
+    #      cp phpunit-9.xml.dist phpunit.xml.dist
+    #      echo "Using PHPUnit 9 config for Wordpress ${{ matrix.wordpress_tag }}"
+    #    elif [[ $(printf '%s\n' "${{ matrix.wordpress_tag }}" "6.1.1" | sort -V | head -n1) == "${{ matrix.wordpress_tag }}" ]]; then
+    #      cp phpunit-10.xml.dist phpunit.xml.dist
+    #      echo "Using PHPUnit 10 config for Wordpress ${{ matrix.wordpress_tag }}"
+    #    fi
 
     - name: Run Makefile 'qa' task
       run: |
-        make qa \
+        make qa ci \
           PLUGIN_NAME=${{ github.event.repository.name }}
 
     - name: Run Makefile 'qa test:coverage' task

@@ -25,7 +25,7 @@ grumphp:
 
         # JSON validation
         jsonlint:
-            ignore_patterns: ['vendor']
+            ignore_patterns: ['node_modules', 'vendor']
             detect_key_conflicts: true
 
         # PHP CS Fixer

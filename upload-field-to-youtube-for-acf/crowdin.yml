@@ -10,6 +10,6 @@
   {
     "source" : "languages/*.pot",
     # @see Crowdin.com > {project} > Sources > {file} > Settings > Resulting file after translation export
-    "translation" : "languages/%locale_with_underscore%.po"
+    "translation" : "languages/%file_name%-%locale_with_underscore%.po"
   }
 ]
