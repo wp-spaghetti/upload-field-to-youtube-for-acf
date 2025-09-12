@@ -5,6 +5,18 @@
 # 2. Purist approach - all entry points (technically correct)
 #.PHONY: (all entry points)
 
+# Environment Variables Handling:
+# This Makefile includes .env file which contains default values for all variables.
+# This ensures variables are properly passed to Docker containers via docker-compose.
+# The .env file takes precedence over system environment variables, so in CI workflows
+# we must pass variables as Make parameters (e.g., VARIABLE=value make target)
+# rather than using environment variables (env: VARIABLE=value).
+# 
+# Example:
+# ✅ Correct:   run: make <target> VARIABLE=value
+# ❌ Wrong:     run: make <target>
+#			   env:
+#					VARIABLE: value
 include .env
 
 CURRENT_BRANCH ?=
@@ -63,9 +75,12 @@ MAILPIT_MAX_MESSAGES ?= 5000
 
 OPENAI_KEY ?=
 
-PHPSTAN_PRO_WEB_PORT ?=
-
 GITHUB_TOKEN ?=
+
+CROWDIN_PROJECT_ID ?=
+CROWDIN_PERSONAL_TOKEN ?=
+
+PHPSTAN_PRO_WEB_PORT ?=
 
 WPSPAGHETTI_UFTYFACF_GOOGLE_OAUTH_CLIENT_ID ?=
 WPSPAGHETTI_UFTYFACF_GOOGLE_OAUTH_CLIENT_SECRET ?=
@@ -85,6 +100,8 @@ DIST_DIR=dist
 SVN_DIR=svn
 SVN_ASSETS_DIR=.wordpress-org
 
+SVN_USERNAME ?=
+SVN_PASSWORD ?=
 SVN_AUTH := $(if $(and $(SVN_USERNAME),$(SVN_PASSWORD)),--username $(SVN_USERNAME) --password $(SVN_PASSWORD),)
 
 # Capture script/action argument
@@ -281,8 +298,18 @@ qa-wordpress:
 
 deploy-zip:
 	@echo "Deploying to zip file"
-# Fix permission, because DIST_DIR is mounted as a volume by docker-compose
-	@chmod 755 $(DIST_DIR) 2>/dev/null || true
+	@echo "Debug: Current user/group: $(shell id -u):$(shell id -g) ($(shell whoami))"
+	@echo "Debug: Working directory: $(shell pwd)"
+	@if [ -d "$(DIST_DIR)" ]; then \
+		echo "Debug: $(DIST_DIR) exists - permissions: $(shell ls -ld $(DIST_DIR) 2>/dev/null || echo 'Cannot read permissions')"; \
+	else \
+		echo "Debug: $(DIST_DIR) does not exist"; \
+	fi
+# Fix permissions, because DIST_DIR is mounted as a volume by docker-compose
+	@sudo mkdir -p $(DIST_DIR) 2>/dev/null || mkdir -p $(DIST_DIR) 2>/dev/null || true
+	@sudo chmod 755 $(DIST_DIR) 2>/dev/null || chmod 755 $(DIST_DIR) 2>/dev/null || true
+	@sudo chown -R $(shell id -u):$(shell id -g) $(DIST_DIR) 2>/dev/null || true
+	@echo "Debug: After fix - $(DIST_DIR) permissions: $(shell ls -ld $(DIST_DIR) 2>/dev/null || echo 'Cannot read permissions')"
 	@mkdir -p $(DIST_DIR)/$(PLUGIN_NAME)
 	@cd $(PLUGIN_NAME) && rsync -av --delete --exclude-from=exclude_from.txt --include-from=include_from.txt . ../$(DIST_DIR)/$(PLUGIN_NAME)/
 
