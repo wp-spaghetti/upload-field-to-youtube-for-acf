@@ -5,6 +5,18 @@
 # 2. Purist approach - all entry points (technically correct)
 #.PHONY: (all entry points)
 
+# Environment Variables Handling:
+# This Makefile includes .env file which contains default values for all variables.
+# This ensures variables are properly passed to Docker containers via docker-compose.
+# The .env file takes precedence over system environment variables, so in CI workflows
+# we must pass variables as Make parameters (e.g., VARIABLE=value make target)
+# rather than using environment variables (env: VARIABLE=value).
+# 
+# Example:
+# ✅ Correct:   run: make <target> VARIABLE=value
+# ❌ Wrong:     run: make <target>
+#			   env:
+#					VARIABLE: value
 include .env
 
 CURRENT_BRANCH ?=
@@ -63,6 +75,11 @@ MAILPIT_MAX_MESSAGES ?= 5000
 
 OPENAI_KEY ?=
 
+GITHUB_TOKEN ?=
+
+CROWDIN_PROJECT_ID ?=
+CROWDIN_PERSONAL_TOKEN ?=
+
 PHPSTAN_PRO_WEB_PORT ?=
 
 WPSPAGHETTI_UFTYFACF_GOOGLE_OAUTH_CLIENT_ID ?=
@@ -83,6 +100,8 @@ DIST_DIR=dist
 SVN_DIR=svn
 SVN_ASSETS_DIR=.wordpress-org
 
+SVN_USERNAME ?=
+SVN_PASSWORD ?=
 SVN_AUTH := $(if $(and $(SVN_USERNAME),$(SVN_PASSWORD)),--username $(SVN_USERNAME) --password $(SVN_PASSWORD),)
 
 # Capture script/action argument

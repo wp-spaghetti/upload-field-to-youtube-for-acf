@@ -21,9 +21,25 @@ inputs:
   plugin_name:
     description: 'Plugin name'
     required: true
-  gitHub_token:
+  github_token:
     description: "GitHub Token"
     required: true
+  svn_username:
+    description: "SVN Username"
+    required: false
+    default: ''
+  svn_password:
+    description: "SVN Password"
+    required: false
+    default: ''
+  crowdin_project_id:
+    description: "Crowdin Project ID"
+    required: false
+    default: ''
+  crowdin_personal_token:
+    description: "Crowdin Personal Token"
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
@@ -49,7 +65,24 @@ runs:
 
     - name: Create .env file
       shell: bash
-      run: cp .env.dist .env
+      run: |
+        cp .env.dist .env
+        # Update variables if provided
+        if [ -n "${{ inputs.github_token }}" ]; then
+          sed -i "s/^GITHUB_TOKEN=.*/GITHUB_TOKEN=${{ inputs.github_token }}/" .env
+        fi
+        if [ -n "${{ inputs.svn_username }}" ]; then
+          sed -i "s/^SVN_USERNAME=.*/SVN_USERNAME=${{ inputs.svn_username }}/" .env
+        fi
+        if [ -n "${{ inputs.svn_password }}" ]; then
+          sed -i "s/^SVN_PASSWORD=.*/SVN_PASSWORD=${{ inputs.svn_password }}/" .env
+        fi
+        if [ -n "${{ inputs.crowdin_project_id }}" ]; then
+          sed -i "s/^CROWDIN_PROJECT_ID=.*/CROWDIN_PROJECT_ID=${{ inputs.crowdin_project_id }}/" .env
+        fi
+        if [ -n "${{ inputs.crowdin_personal_token }}" ]; then
+          sed -i "s/^CROWDIN_PERSONAL_TOKEN=.*/CROWDIN_PERSONAL_TOKEN=${{ inputs.crowdin_personal_token }}/" .env
+        fi
 
     # method #1
     - name: Install mkcert
@@ -75,8 +108,12 @@ runs:
 
     - name: Run Makefile 'all' task
       shell: bash
+      # Variables are passed as Make parameters because the Makefile includes .env
+      # which overrides environment variables, so using env: would be ignored.
+      # See comment in Makefile before "include .env".
       run: |
         make \
+          MODE=${{ inputs.mode }} \
           MARIADB_TAG=${{ inputs.mariadb_tag }} \
           WORDPRESS_TAG=${{ inputs.wordpress_tag }} \
           NODE_TAG=${{ inputs.node_tag }} \
@@ -102,6 +139,9 @@ runs:
 
     - name: Run Makefile 'install' task
       shell: bash
+      # Variables are passed as Make parameters because the Makefile includes .env
+      # which overrides environment variables, so using env: would be ignored.
+      # See comment in Makefile before "include .env".
       run: |
         make install \
           MODE=${{ inputs.mode }} \
@@ -109,5 +149,3 @@ runs:
           WORDPRESS_TAG=${{ inputs.wordpress_tag }} \
           NODE_TAG=${{ inputs.node_tag }} \
           PLUGIN_NAME=${{ inputs.plugin_name }}
-      env:
-          GITHUB_TOKEN: ${{ inputs.github_token }}

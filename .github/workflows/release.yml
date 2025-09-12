@@ -88,23 +88,24 @@ jobs:
           node_tag: 22
           plugin_name: ${{ github.event.repository.name }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          svn_username: ${{ secrets.SVN_USERNAME }}
+          svn_password: ${{ secrets.SVN_PASSWORD }}
+          crowdin_project_id: ${{ secrets.CROWDIN_PROJECT_ID }}
+          crowdin_personal_token: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
 
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y gettext subversion
 
       #https://github.com/orgs/community/discussions/25641#discussioncomment-3248571
       - name: Run Makefile 'deploy-ci' task
+        # Variables are passed as Make parameters because the Makefile includes .env
+        # which overrides environment variables, so using env: would be ignored.
+        # See comment in Makefile before "include .env".
         run: |
           make deploy-ci \
             MODE=production \
             PLUGIN_NAME=${{ github.event.repository.name }} \
             PLUGIN_VERSION=${{ needs.release.outputs.version }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
-          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
-          CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
-          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
