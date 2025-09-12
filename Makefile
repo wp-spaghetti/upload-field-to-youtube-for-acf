@@ -65,8 +65,6 @@ OPENAI_KEY ?=
 
 PHPSTAN_PRO_WEB_PORT ?=
 
-GITHUB_TOKEN ?=
-
 WPSPAGHETTI_UFTYFACF_GOOGLE_OAUTH_CLIENT_ID ?=
 WPSPAGHETTI_UFTYFACF_GOOGLE_OAUTH_CLIENT_SECRET ?=
 WPSPAGHETTI_UFTYFACF_SERVER_UPLOAD_ENABLED ?= false
@@ -281,8 +279,18 @@ qa-wordpress:
 
 deploy-zip:
 	@echo "Deploying to zip file"
-# Fix permission, because DIST_DIR is mounted as a volume by docker-compose
-	@chmod 755 $(DIST_DIR) 2>/dev/null || true
+	@echo "Debug: Current user/group: $(shell id -u):$(shell id -g) ($(shell whoami))"
+	@echo "Debug: Working directory: $(shell pwd)"
+	@if [ -d "$(DIST_DIR)" ]; then \
+		echo "Debug: $(DIST_DIR) exists - permissions: $(shell ls -ld $(DIST_DIR) 2>/dev/null || echo 'Cannot read permissions')"; \
+	else \
+		echo "Debug: $(DIST_DIR) does not exist"; \
+	fi
+# Fix permissions, because DIST_DIR is mounted as a volume by docker-compose
+	@sudo mkdir -p $(DIST_DIR) 2>/dev/null || mkdir -p $(DIST_DIR) 2>/dev/null || true
+	@sudo chmod 755 $(DIST_DIR) 2>/dev/null || chmod 755 $(DIST_DIR) 2>/dev/null || true
+	@sudo chown -R $(shell id -u):$(shell id -g) $(DIST_DIR) 2>/dev/null || true
+	@echo "Debug: After fix - $(DIST_DIR) permissions: $(shell ls -ld $(DIST_DIR) 2>/dev/null || echo 'Cannot read permissions')"
 	@mkdir -p $(DIST_DIR)/$(PLUGIN_NAME)
 	@cd $(PLUGIN_NAME) && rsync -av --delete --exclude-from=exclude_from.txt --include-from=include_from.txt . ../$(DIST_DIR)/$(PLUGIN_NAME)/
 

@@ -108,5 +108,6 @@ runs:
           MARIADB_TAG=${{ inputs.mariadb_tag }} \
           WORDPRESS_TAG=${{ inputs.wordpress_tag }} \
           NODE_TAG=${{ inputs.node_tag }} \
-          PLUGIN_NAME=${{ inputs.plugin_name }} \
-          GITHUB_TOKEN=${{ inputs.github_token }}
+          PLUGIN_NAME=${{ inputs.plugin_name }}
+      env:
+          GITHUB_TOKEN: ${{ inputs.github_token }}
