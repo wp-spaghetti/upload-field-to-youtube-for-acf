@@ -248,18 +248,18 @@ endif
 	@echo "[wordpress] Flushing rewrite rules"
 	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'wp rewrite flush --allow-root'
 
-	@echo "[wordpress] Changing folders permissions"
-# avoids write permission errors when PHP writes w/ 1001 user
-	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'chmod -Rf o+w /tmp/$(PLUGIN_NAME)-plugin/tests/data/wp-cfm'
+	@echo "[wordpress] Changing data folder ownership"
+# Avoids write permission errors when PHP writes w/ 1001 user
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'chmod -Rf o+w /tmp/$(PLUGIN_NAME)-plugin/tests/data/wp-cfm || true'
 
-	@echo "[wordpress] Changing folders owner"
-	@$(DOCKER_COMPOSE) exec -u $(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'for dir in $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/plugins/*; do if [ "$$(basename $$dir)" != "$(PLUGIN_NAME)" ]; then chown -R 1001 $$dir; fi; done'
+	@echo "[wordpress] Changing other plugins folders ownership"
+	@$(DOCKER_COMPOSE) exec -u $(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'for dir in $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/plugins/*; do if [ "$$(basename $$dir)" != "$(PLUGIN_NAME)" ]; then chown -R 1001 $$dir || true; fi; done'
 	
 	@echo "[wordpress] Changing wp-config.php permissions"
-	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'chmod 666 $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-config.php'
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'chmod 666 $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-config.php || true'
 
 	@echo "[wordpress] Redirecting debug.log to stderr"
-	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'rm -f $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/debug.log && ln -sfn /dev/stderr $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/debug.log'
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'rm -f $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/debug.log && ln -sfn /dev/stderr $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/debug.log || true'
 
 	@echo "[wordpress] Starting MTA daemon"
 	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) /usr/local/bin/mta-manager.sh start
@@ -281,6 +281,8 @@ qa-wordpress:
 
 deploy-zip:
 	@echo "Deploying to zip file"
+# Fix permission, because DIST_DIR is mounted as a volume by docker-compose
+	@chmod 755 $(DIST_DIR) 2>/dev/null || true
 	@mkdir -p $(DIST_DIR)/$(PLUGIN_NAME)
 	@cd $(PLUGIN_NAME) && rsync -av --delete --exclude-from=exclude_from.txt --include-from=include_from.txt . ../$(DIST_DIR)/$(PLUGIN_NAME)/
 
@@ -324,6 +326,7 @@ ifeq ($(GITHUB_ACTIONS),true)
 			# Removes files that have been deleted from the project \
 			cd $(TMP_DIR)/$(SVN_DIR) && svn status | grep '^!' | awk '{print $$2}' | xargs -r svn delete; \
 			cd $(TMP_DIR)/$(SVN_DIR) && svn $(SVN_AUTH) commit -m "Release version $(PLUGIN_VERSION)"; \
+			# Do not delete DIST_DIR completely, because it is mounted as a volume by docker-compose \
 			rm -rf $(TMP_DIR)/$(SVN_DIR) $(DIST_DIR)/$(PLUGIN_NAME); \
 			echo "✅ SVN deployment completed successfully"; \
 		else \
@@ -395,7 +398,8 @@ clean-node:
 clean-wordpress: 
 	@echo "[wordpress] Cleaning artifacts"
 	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'if [ -d "$${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/plugins/$(PLUGIN_NAME)" ]; then cd $${WORDPRESS_BASE_DIR:-/bitnami/wordpress}/wp-content/plugins/$(PLUGIN_NAME) && rm -rf .git vendor composer.lock; fi'
-	@rm -rf $(DIST_DIR)
+# Do not delete DIST_DIR completely, because it is mounted as a volume by docker-compose
+	@rm -rf $(DIST_DIR)/*
 
 down: 
 	@echo "Stopping docker compose services"
