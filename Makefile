@@ -112,9 +112,6 @@ check:
 	@command -v git >/dev/null 2>&1 || { echo >&2 "❌ git is required but not installed. Aborting."; exit 1; }
 	@command -v rsync >/dev/null 2>&1 || { echo >&2 "❌ rsync is required but not installed. Aborting."; exit 1; }
 	@command -v zip >/dev/null 2>&1 || { echo >&2 "❌ zip is required but not installed. Aborting."; exit 1; }
-ifeq ($(GITHUB_ACTIONS),true)
-	@command -v svn >/dev/null 2>&1 || { echo >&2 "❌ svn is required but not installed. Aborting."; exit 1; }
-endif
 	@echo "✅ All requirements are met"
 
 .gitconfig: 
@@ -301,6 +298,7 @@ deploy-zip:
 
 deploy-svn:
 ifeq ($(GITHUB_ACTIONS),true)
+	@command -v svn >/dev/null 2>&1 || { echo >&2 "❌ svn is required but not installed. Aborting."; exit 1; }
 	@echo "Checking WordPress SVN repository"
 	@if svn ls https://plugins.svn.wordpress.org/$(PLUGIN_NAME)/ >/dev/null 2>&1; then \
 		echo "SVN repository exists, checking credentials"; \
