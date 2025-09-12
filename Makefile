@@ -142,7 +142,7 @@ $(TMP_DIR)/wait-for-it.sh:
 set-env:
 	@echo "Setting environment variables"
 ifeq ($(CURRENT_BRANCH),)
-	@$(eval CURRENT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD))
+	@$(eval CURRENT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "$${GITHUB_REF##*/}"))
 	@echo "CURRENT_BRANCH set to: $(CURRENT_BRANCH)"
 endif
 ifeq ($(PLUGIN_NAME),)
@@ -337,9 +337,9 @@ endif
 crowdin-upload: setup
 ifneq ($(and $(CROWDIN_PROJECT_ID),$(CROWDIN_PERSONAL_TOKEN)),)
 	@if [[ "$(CURRENT_BRANCH)" != support/* ]]; then \
-		@echo "[node] Uploading sources to Crowdin"
-		@$(DOCKER_COMPOSE) exec -u$(NODE_CONTAINER_USER) $(NODE_CONTAINER_NAME) sh -c 'cd $(NODE_CONTAINER_WORKSPACE_DIR)/$(PLUGIN_NAME) && npm run 	crowdin:upload'
-		@echo "✅ Sources uploaded to Crowdin"
+		echo "[node] Uploading sources to Crowdin"; \
+		$(DOCKER_COMPOSE) exec -u$(NODE_CONTAINER_USER) $(NODE_CONTAINER_NAME) sh -c 'cd $(NODE_CONTAINER_WORKSPACE_DIR)/$(PLUGIN_NAME) && npm run crowdin:upload'; \
+		echo "✅ Sources uploaded to Crowdin"; \
 	else \
 		echo "❌ Current branch is a support branch, skipping..."; \
 	fi
@@ -350,9 +350,9 @@ endif
 crowdin-download: setup
 ifneq ($(and $(CROWDIN_PROJECT_ID),$(CROWDIN_PERSONAL_TOKEN)),)
 	@if [[ "$(CURRENT_BRANCH)" != support/* ]]; then \
-		@echo "[node] Downloading translations from Crowdin"
-		@$(DOCKER_COMPOSE) exec -u$(NODE_CONTAINER_USER) $(NODE_CONTAINER_NAME) sh -c 'cd $(NODE_CONTAINER_WORKSPACE_DIR)/$(PLUGIN_NAME) && npm run 	crowdin:download'
-		@echo "✅ Translations downloaded from Crowdin"
+		echo "[node] Downloading translations from Crowdin"; \
+		$(DOCKER_COMPOSE) exec -u$(NODE_CONTAINER_USER) $(NODE_CONTAINER_NAME) sh -c 'cd $(NODE_CONTAINER_WORKSPACE_DIR)/$(PLUGIN_NAME) && npm run crowdin:download'; \
+		echo "✅ Translations downloaded from Crowdin"; \
 	else \
 		echo "❌ Current branch is a support branch, skipping..."; \
 	fi
