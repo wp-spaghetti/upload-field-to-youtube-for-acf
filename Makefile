@@ -298,18 +298,15 @@ qa-wordpress:
 
 deploy-zip:
 	@echo "Deploying to zip file"
+
+# Fix DIST_DIR permissions, because it is mounted as a volume by docker-compose
 	@echo "Debug: Current user/group: $(shell id -u):$(shell id -g) ($(shell whoami))"
 	@echo "Debug: Working directory: $(shell pwd)"
-	@if [ -d "$(DIST_DIR)" ]; then \
-		echo "Debug: $(DIST_DIR) exists - permissions: $(shell ls -ld $(DIST_DIR) 2>/dev/null || echo 'Cannot read permissions')"; \
-	else \
-		echo "Debug: $(DIST_DIR) does not exist"; \
-	fi
-# Fix permissions, because DIST_DIR is mounted as a volume by docker-compose
-	@sudo mkdir -p $(DIST_DIR) 2>/dev/null || mkdir -p $(DIST_DIR) 2>/dev/null || true
+	@echo "Debug: Before fix - $(DIST_DIR) permissions: $(shell ls -ld $(DIST_DIR) 2>/dev/null || echo 'Cannot read permissions')"
 	@sudo chmod 755 $(DIST_DIR) 2>/dev/null || chmod 755 $(DIST_DIR) 2>/dev/null || true
 	@sudo chown -R $(shell id -u):$(shell id -g) $(DIST_DIR) 2>/dev/null || true
 	@echo "Debug: After fix - $(DIST_DIR) permissions: $(shell ls -ld $(DIST_DIR) 2>/dev/null || echo 'Cannot read permissions')"
+
 	@mkdir -p $(DIST_DIR)/$(PLUGIN_NAME)
 	@cd $(PLUGIN_NAME) && rsync -av --delete --exclude-from=exclude_from.txt --include-from=include_from.txt . ../$(DIST_DIR)/$(PLUGIN_NAME)/
 
@@ -319,7 +316,7 @@ deploy-zip:
 	@echo "[wordpress] Removing git-updater-lite dependency for WordPress compliance"
 # To force a certain version of php you can use:
 # composer config platform.php 8.0 && <composer command> && composer config --unset platform.php
-	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'cd /tmp/dist/$(PLUGIN_NAME) && composer remove afragen/git-updater-lite --no-update --optimize-autoloader --classmap-authoritative --no-interaction'
+	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'cd /tmp/dist/$(PLUGIN_NAME) && composer remove afragen/git-updater-lite --update-no-dev --optimize-autoloader --classmap-authoritative --no-interaction'
 
 	@echo "Removing Update URI header for WordPress compliance"
 	@sed -i '/\* Update URI:/d' $(DIST_DIR)/$(PLUGIN_NAME)/$(PLUGIN_NAME).php
