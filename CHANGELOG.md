@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0](https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/compare/v0.3.0...v0.4.0) (2025-09-12)
+
+### Features
+
+* total rework ([#1](https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/issues/1)) ([#2](https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/issues/2)) ([10cca0f](https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/commit/10cca0fd81e19a0b085c6405d3859e2013b2c073))
 
 ### Features
 
