@@ -42,7 +42,7 @@ return [
         'version' => WPSPAGHETTI_UFTYFACF_VERSION,
         'url' => WPSPAGHETTI_UFTYFACF_URL,
         'path' => WPSPAGHETTI_UFTYFACF_PATH,
-        'debug' => Environment::getBool('WP_DEBUG', false),
+        'debug' => Environment::isDebug(),
         'locale' => get_locale(),
         'server_upload' => Environment::getBool('WPSPAGHETTI_UFTYFACF_SERVER_UPLOAD_ENABLED', false),
         'cron_schedule' => Environment::get('WPSPAGHETTI_UFTYFACF_CRON_SCHEDULE', 'daily'),

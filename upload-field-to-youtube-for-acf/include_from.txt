@@ -6,6 +6,7 @@
 + languages/**
 + resources/
 + resources/**
+- resources/images/
 + src/
 + src/**
 + vendor/

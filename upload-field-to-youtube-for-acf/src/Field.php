@@ -206,15 +206,15 @@ class Field extends \acf_field
      */
     public function admin_menu(): void
     {
-        if (current_user_can('manage_options') || current_user_can('manage_'.$this->container->get('plugin_undername'))) {
-            $capability = current_user_can('manage_options') ? 'manage_options' : 'manage_'.$this->container->get('plugin_undername');
+        if (current_user_can('manage_options') || current_user_can($this->container->get('plugin_prefix').'_manage')) {
+            $capability = current_user_can('manage_options') ? 'manage_options' : $this->container->get('plugin_prefix').'_manage';
 
             add_options_page(
-                $this->label,               // Page title
-                $this->label,               // Menu title
-                $capability,                // Capability
-                $this->container->get('plugin_undername'),                // Menu slug
-                [$this, 'settings_page'],   // Callback function
+                $this->label,                           // Page title
+                $this->label,                           // Menu title
+                $capability,                            // Capability
+                $this->container->get('plugin_name'),   // Menu slug
+                [$this, 'settings_page'],               // Callback function
             );
         }
     }
@@ -228,7 +228,7 @@ class Field extends \acf_field
     {
         $role = get_role('administrator');
         if ($role) {
-            $role->add_cap('manage_'.$this->container->get('plugin_undername'));
+            $role->add_cap($this->container->get('plugin_prefix').'_manage');
         }
 
         if (isset($_POST['action']) && 'logout' === sanitize_text_field(wp_unslash($_POST['action']))) {
@@ -242,12 +242,12 @@ class Field extends \acf_field
         }
 
         // Handle settings save
-        if (isset($_POST['action']) && sanitize_text_field(wp_unslash($_POST['action'])) === $this->container->get('plugin_undername').'_save_settings') {
+        if (isset($_POST['action']) && sanitize_text_field(wp_unslash($_POST['action'])) === $this->container->get('plugin_prefix').'_save_settings') {
             if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'] ?? '')))) {
                 wp_die(esc_html__('Security check failed', 'upload-field-to-youtube-for-acf'));
             }
 
-            if (!current_user_can('manage_options') && !current_user_can('manage_'.$this->container->get('plugin_undername'))) {
+            if (!current_user_can('manage_options') && !current_user_can($this->container->get('plugin_prefix').'_manage')) {
                 wp_die(esc_html__('Insufficient permissions', 'upload-field-to-youtube-for-acf'));
             }
 
@@ -271,7 +271,7 @@ class Field extends \acf_field
     public function admin_notices(): void
     {
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Wordpress parameter
-        if (isset($_GET['page']) && $this->container->get('plugin_undername') === sanitize_text_field(wp_unslash($_GET['page']))) {
+        if (isset($_GET['page']) && $this->container->get('plugin_name') === sanitize_text_field(wp_unslash($_GET['page']))) {
             return;
         }
 
@@ -916,7 +916,7 @@ class Field extends \acf_field
                     echo '<hr>';
                     echo '<form method="post" action="">';
                     wp_nonce_field();
-                    echo '<input type="hidden" name="action" value="'.esc_attr($this->container->get('plugin_undername').'_save_settings').'">';
+                    echo '<input type="hidden" name="action" value="'.esc_attr($this->container->get('plugin_prefix').'_save_settings').'">';
 
                     echo wp_kses_post($output);
 
@@ -1493,7 +1493,7 @@ class Field extends \acf_field
      */
     private function get_cron_hook(): string
     {
-        return $this->get_hook_prefix().'check_oauth_token';
+        return $this->container->get('plugin_prefix').'_check_oauth_token';
     }
 
     /**
@@ -1503,8 +1503,8 @@ class Field extends \acf_field
     {
         // Define migrations: old_key => new_key
         $option_migrations = [
-            $this->container->get('plugin_name').'__access_token' => $this->get_hook_prefix().'access_token',
-            $this->container->get('plugin_name').'__activated' => $this->get_hook_prefix().'activated',
+            $this->container->get('plugin_name').'__access_token' => $this->container->get('plugin_prefix').'_access_token',
+            $this->container->get('plugin_name').'__activated' => $this->container->get('plugin_prefix').'_activated',
         ];
 
         // Migrate options

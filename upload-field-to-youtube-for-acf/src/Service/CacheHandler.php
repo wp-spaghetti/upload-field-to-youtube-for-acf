@@ -46,7 +46,7 @@ class CacheHandler
     ) {
         $this->init_hook($container);
 
-        $this->option_name = $this->container->get('plugin_undername').'__access_token';
+        $this->option_name = $this->container->get('plugin_prefix').'_access_token';
     }
 
     /**
@@ -235,7 +235,7 @@ class CacheHandler
         $this->do_action(__FUNCTION__.'_before', $cache_info);
 
         // Filter to modify cache info - ensure result is always an array
-        $filtered_cache_info = apply_filters($this->container->get('plugin_undername').'_cache_info', $cache_info);
+        $filtered_cache_info = $this->apply_filters(__FUNCTION__.'_cache_info', $cache_info);
 
         // Ensure the filtered result is an array - fallback to original if not
         if (!\is_array($filtered_cache_info) || empty($filtered_cache_info)) {
@@ -425,10 +425,7 @@ class CacheHandler
         ];
 
         // Filter to customize cache clearing methods
-        $cache_clear_methods = apply_filters(
-            $this->container->get('plugin_undername').'_cache_clear_methods',
-            $default_methods
-        );
+        $cache_clear_methods = $this->apply_filters(__FUNCTION__.'_cache_clear_methods', $default_methods);
 
         // Ensure cache_clear_methods is an array with safe defaults
         if (!\is_array($cache_clear_methods)) {
