@@ -86,13 +86,19 @@ jobs:
 
     - name: SonarQube Scan
       if: matrix.wordpress_tag == 'latest'  
-      uses: SonarSource/sonarqube-scan-action@master
+      uses: SonarSource/sonarqube-scan-action@v5.3.1
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
+    # Snyk Actions Security Note:
+    # Unlike other GitHub Actions, Snyk does not use semantic versioning.
+    # For security compliance (as recommended by SonarQube), we use specific commit SHA
+    # instead of @master to ensure immutable and verifiable builds.
+    # To update: visit https://github.com/snyk/actions/commits/master/ 
+    # and copy the latest commit SHA.
     - name: Run Snyk to check for vulnerabilities
       if: matrix.wordpress_tag == 'latest'
-      uses: snyk/actions/php@master
+      uses: snyk/actions/php@e2221410bff24446ba09102212d8bc75a567237d
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
@@ -106,7 +112,7 @@ jobs:
         
     - name: Run Snyk to check Node.js dependencies
       if: matrix.wordpress_tag == 'latest'
-      uses: snyk/actions/node@master
+      uses: snyk/actions/node@e2221410bff24446ba09102212d8bc75a567237d
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
