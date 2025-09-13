@@ -300,12 +300,14 @@ deploy-zip:
 	@echo "Deploying to zip file"
 
 # Fix DIST_DIR permissions, because it is mounted as a volume by docker-compose
+ifeq ($(GITHUB_ACTIONS),true)
 	@echo "Debug: Current user/group: $(shell id -u):$(shell id -g) ($(shell whoami))"
 	@echo "Debug: Working directory: $(shell pwd)"
 	@echo "Debug: Before fix - $(DIST_DIR) permissions: $(shell ls -ld $(DIST_DIR) 2>/dev/null || echo 'Cannot read permissions')"
 	@sudo chmod 755 $(DIST_DIR) 2>/dev/null || chmod 755 $(DIST_DIR) 2>/dev/null || true
 	@sudo chown -R $(shell id -u):$(shell id -g) $(DIST_DIR) 2>/dev/null || true
 	@echo "Debug: After fix - $(DIST_DIR) permissions: $(shell ls -ld $(DIST_DIR) 2>/dev/null || echo 'Cannot read permissions')"
+endif
 
 	@mkdir -p $(DIST_DIR)/$(PLUGIN_NAME)
 	@cd $(PLUGIN_NAME) && rsync -a --delete --exclude-from=exclude_from.txt --include-from=include_from.txt . ../$(DIST_DIR)/$(PLUGIN_NAME)/

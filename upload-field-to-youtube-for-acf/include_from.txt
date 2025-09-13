@@ -5,8 +5,8 @@
 + languages/
 + languages/**
 + resources/
-+ resources/**
 - resources/images/
++ resources/**
 + src/
 + src/**
 + vendor/
