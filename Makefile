@@ -319,9 +319,10 @@ deploy-zip:
 	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'cd /tmp/dist/$(PLUGIN_NAME) && composer remove afragen/git-updater-lite --update-no-dev --optimize-autoloader --classmap-authoritative --no-interaction'
 
 	@echo "Creating clean copy and reappling exclusion rules"
-	@cp -r $(DIST_DIR)/$(PLUGIN_NAME) $(DIST_DIR)/$(PLUGIN_NAME)_clean
-	@rsync -a --delete --exclude-from=$(PLUGIN_NAME)/exclude_from.txt --include-from=$(PLUGIN_NAME)/include_from.txt $(DIST_DIR)/$(PLUGIN_NAME)_clean/ $(DIST_DIR)/$(PLUGIN_NAME)/
-	@rm -rf $(DIST_DIR)/$(PLUGIN_NAME)_clean
+	@mv $(DIST_DIR)/$(PLUGIN_NAME) $(DIST_DIR)/$(PLUGIN_NAME)_old
+	@mkdir -p $(DIST_DIR)/$(PLUGIN_NAME)
+	@rsync -a --delete --exclude-from=$(PLUGIN_NAME)/exclude_from.txt --include-from=$(PLUGIN_NAME)/include_from.txt $(DIST_DIR)/$(PLUGIN_NAME)_old/ $(DIST_DIR)/$(PLUGIN_NAME)/
+	@rm -rf $(DIST_DIR)/$(PLUGIN_NAME)_old
 
 	@echo "Removing Update URI header for WordPress compliance"
 	@sed -i '/\* Update URI:/d' $(DIST_DIR)/$(PLUGIN_NAME)/$(PLUGIN_NAME).php
