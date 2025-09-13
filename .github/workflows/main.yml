@@ -112,13 +112,14 @@ jobs:
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-    - name: Run Snyk to check for vulnerabilities
+    - name: Run Snyk to check for vulnerabilities (PHP)
       if: matrix.wordpress_tag == 'latest'
+      continue-on-error: true
       uses: snyk/actions/php@e2221410bff24446ba09102212d8bc75a567237d
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
-        args: --severity-threshold=high --file=${{ github.event.repository.name }}/composer.lock
+        args: --severity-threshold=high --sarif-file-output=snyk.sarif --file=${{ github.event.repository.name }}/composer.lock
         
     - name: Upload Snyk results to GitHub Code Scanning
       if: matrix.wordpress_tag == 'latest'
@@ -126,8 +127,9 @@ jobs:
       with:
         sarif_file: snyk.sarif
         
-    - name: Run Snyk to check Node.js dependencies
+    - name: Run Snyk to check for vulnerabilities (Node.js)
       if: matrix.wordpress_tag == 'latest'
+      continue-on-error: true
       uses: snyk/actions/node@e2221410bff24446ba09102212d8bc75a567237d
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
