@@ -39,6 +39,7 @@ jobs:
 
       - name: Semantic Release
         uses: cycjimmy/semantic-release-action@v5
+        id: semantic
         with:
           extra_plugins: |
             @semantic-release/changelog@latest
@@ -55,11 +56,10 @@ jobs:
       - name: Get released version
         id: version
         run: |
-          VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -n "$VERSION" ]; then
-            echo "version=${VERSION#v}" >> $GITHUB_OUTPUT
+          if [ "${{ steps.semantic.outputs.new_release_published }}" == "true" ]; then
+            echo "version=${{ steps.semantic.outputs.new_release_version }}" >> $GITHUB_OUTPUT
             echo "released=true" >> $GITHUB_OUTPUT
-            echo "✅ New version to release: ${VERSION#v}"
+            echo "✅ New version to release: ${{ steps.semantic.outputs.new_release_version }}"
           else
             echo "released=false" >> $GITHUB_OUTPUT
             echo "❌ No new version to release"
