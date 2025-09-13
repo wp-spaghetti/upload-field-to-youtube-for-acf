@@ -320,7 +320,7 @@ deploy-zip:
 
 	@echo "Creating clean copy and reappling exclusion rules"
 	@cp -r $(DIST_DIR)/$(PLUGIN_NAME) $(DIST_DIR)/$(PLUGIN_NAME)_clean
-	@rsync -a --delete --exclude-from=exclude_from.txt --include-from=include_from.txt $(DIST_DIR)/$(PLUGIN_NAME)_clean/ $(DIST_DIR)/$(PLUGIN_NAME)/
+	@rsync -a --delete --exclude-from=$(PLUGIN_NAME)/exclude_from.txt --include-from=$(PLUGIN_NAME)/include_from.txt $(DIST_DIR)/$(PLUGIN_NAME)_clean/ $(DIST_DIR)/$(PLUGIN_NAME)/
 	@rm -rf $(DIST_DIR)/$(PLUGIN_NAME)_clean
 
 	@echo "Removing Update URI header for WordPress compliance"
