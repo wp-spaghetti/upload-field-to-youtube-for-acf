@@ -1,14 +1,16 @@
 ![](.wordpress-org/banner-1544x500.jpg)
 
-![PHP Version](https://img.shields.io/badge/php->=8.0-blue)
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/wp-spaghetti/upload-field-to-youtube-for-acf/total)
 ![GitHub Actions Workflow Status](https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/actions/workflows/main.yml/badge.svg)
 ![Coverage Status](https://img.shields.io/codecov/c/github/wp-spaghetti/upload-field-to-youtube-for-acf)
+![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=wp-spaghetti_upload-field-to-youtube-for-acf&metric=alert_status)
+![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=wp-spaghetti_upload-field-to-youtube-for-acf&metric=security_rating)
+![Known Vulnerabilities](https://snyk.io/test/github/wp-spaghetti/upload-field-to-youtube-for-acf/badge.svg)
 ![GitHub Issues](https://img.shields.io/github/issues/wp-spaghetti/upload-field-to-youtube-for-acf)
-![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 ![GitHub Release](https://img.shields.io/github/v/release/wp-spaghetti/upload-field-to-youtube-for-acf)
 ![License](https://img.shields.io/github/license/wp-spaghetti/upload-field-to-youtube-for-acf)
 <!--
+![PHP Version](https://img.shields.io/badge/php->=8.0-blue)
 ![Code Climate](https://img.shields.io/codeclimate/maintainability/wp-spaghetti/upload-field-to-youtube-for-acf)
 -->
 
