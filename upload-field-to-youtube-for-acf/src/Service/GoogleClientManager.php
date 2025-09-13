@@ -225,7 +225,7 @@ class GoogleClientManager
         $this->check_oauth_token();
 
         if (empty($access_token = $this->get_access_token()) || !isset($access_token['access_token'])) {
-            if (!current_user_can('manage_options') && !current_user_can('manage_'.$this->container->get('plugin_undername'))) {
+            if (!current_user_can('manage_options') && !current_user_can($this->container->get('plugin_prefix').'_manage')) {
                 $data = [
                     'status' => 'error',
                     'message' => __('App not authorized, contact your system administrator.', 'upload-field-to-youtube-for-acf'),

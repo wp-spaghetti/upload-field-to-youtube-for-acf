@@ -53,7 +53,7 @@ class Bootstrap
         add_action('deactivated_plugin', [$this, 'deactivated_plugin']);
 
         if (!$this->is_mu_plugin()) {
-            delete_option($this->container->get('plugin_undername').'__activated');
+            delete_option($this->container->get('plugin_prefix').'_activated');
 
             // Use closures to avoid PHPStan callback type issues with array{mixed, 'method'} format
             register_activation_hook(WPSPAGHETTI_UFTYFACF_BASENAME, fn () => [$this->field_instance, 'activate']);
@@ -112,9 +112,9 @@ class Bootstrap
             return;
         }
 
-        if ($this->is_mu_plugin() && !get_option($this->container->get('plugin_undername').'__activated')) {
+        if ($this->is_mu_plugin() && !get_option($this->container->get('plugin_prefix').'_activated')) {
             $this->field_instance::activate();
-            update_option($this->container->get('plugin_undername').'__activated', true);
+            update_option($this->container->get('plugin_prefix').'_activated', true);
 
             $this->do_action(__FUNCTION__.'_mu_plugin_activated');
         }
