@@ -308,21 +308,26 @@ deploy-zip:
 	@echo "Debug: After fix - $(DIST_DIR) permissions: $(shell ls -ld $(DIST_DIR) 2>/dev/null || echo 'Cannot read permissions')"
 
 	@mkdir -p $(DIST_DIR)/$(PLUGIN_NAME)
-	@cd $(PLUGIN_NAME) && rsync -av --delete --exclude-from=exclude_from.txt --include-from=include_from.txt . ../$(DIST_DIR)/$(PLUGIN_NAME)/
+	@cd $(PLUGIN_NAME) && rsync -a --delete --exclude-from=exclude_from.txt --include-from=include_from.txt . ../$(DIST_DIR)/$(PLUGIN_NAME)/
 
 	@echo "Creating version WITH Git Updater Lite for Composer installations"
-	@cd $(DIST_DIR)/$(PLUGIN_NAME) && zip -r ../$(PLUGIN_NAME)--with-git-updater.zip .
+	@cd $(DIST_DIR)/$(PLUGIN_NAME) && zip -qr ../$(PLUGIN_NAME)--with-git-updater.zip .
 
 	@echo "[wordpress] Removing git-updater-lite dependency for WordPress compliance"
 # To force a certain version of php you can use:
 # composer config platform.php 8.0 && <composer command> && composer config --unset platform.php
 	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'cd /tmp/dist/$(PLUGIN_NAME) && composer remove afragen/git-updater-lite --update-no-dev --optimize-autoloader --classmap-authoritative --no-interaction'
 
+	@echo "Creating clean copy and reappling exclusion rules"
+	@cp -r $(DIST_DIR)/$(PLUGIN_NAME) $(DIST_DIR)/$(PLUGIN_NAME)_clean
+	@rsync -a --delete --exclude-from=exclude_from.txt --include-from=include_from.txt $(DIST_DIR)/$(PLUGIN_NAME)_clean/ $(DIST_DIR)/$(PLUGIN_NAME)/
+	@rm -rf $(DIST_DIR)/$(PLUGIN_NAME)_clean
+
 	@echo "Removing Update URI header for WordPress compliance"
 	@sed -i '/\* Update URI:/d' $(DIST_DIR)/$(PLUGIN_NAME)/$(PLUGIN_NAME).php
 
 	@echo "Creating standard version WITHOUT Git Updater Lite for WordPress.org"
-	@cd $(DIST_DIR)/$(PLUGIN_NAME) && zip -r ../$(PLUGIN_NAME).zip .
+	@cd $(DIST_DIR)/$(PLUGIN_NAME) && zip -qr ../$(PLUGIN_NAME).zip .
 
 deploy-svn:
 ifeq ($(GITHUB_ACTIONS),true)
@@ -335,15 +340,15 @@ ifeq ($(GITHUB_ACTIONS),true)
 			svn $(SVN_AUTH) checkout https://plugins.svn.wordpress.org/$(PLUGIN_NAME)/ $(TMP_DIR)/$(SVN_DIR); \
 			if [ "$(CURRENT_BRANCH)" != support/* ]; then \
 				echo "Deploying to trunk and assets"; \
-				rsync -av --delete $(DIST_DIR)/$(PLUGIN_NAME)/ $(TMP_DIR)/$(SVN_DIR)/trunk/; \
-				rsync -av --delete $(SVN_ASSETS_DIR)/ $(TMP_DIR)/$(SVN_DIR)/assets/; \
+				rsync -a --delete $(DIST_DIR)/$(PLUGIN_NAME)/ $(TMP_DIR)/$(SVN_DIR)/trunk/; \
+				rsync -a --delete $(SVN_ASSETS_DIR)/ $(TMP_DIR)/$(SVN_DIR)/assets/; \
 			else \
 				echo "❌ Support branch detected, skipping..."; \
 			fi; \
 			if [ ! -d "$(TMP_DIR)/$(SVN_DIR)/tags/$(PLUGIN_VERSION)" ]; then \
 				echo "Creating tag v$(PLUGIN_VERSION)"; \
 				mkdir -p $(TMP_DIR)/$(SVN_DIR)/tags/$(PLUGIN_VERSION); \
-				rsync -av --delete $(DIST_DIR)/$(PLUGIN_NAME)/ $(TMP_DIR)/$(SVN_DIR)/tags/$(PLUGIN_VERSION)/; \
+				rsync -a --delete $(DIST_DIR)/$(PLUGIN_NAME)/ $(TMP_DIR)/$(SVN_DIR)/tags/$(PLUGIN_VERSION)/; \
 			fi; \
 			echo "Committing to SVN repository"; \
 			cd $(TMP_DIR)/$(SVN_DIR) && svn add --force .; \
