@@ -1,6 +1,6 @@
 ![](.wordpress-org/banner-1544x500.jpg)
 
-![PHP Version](https://img.shields.io/packagist/php-v/wp-spaghetti/upload-field-to-youtube-for-acf)
+![PHP Version](https://img.shields.io/badge/php->=8.0-blue)
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/wp-spaghetti/upload-field-to-youtube-for-acf/total)
 ![GitHub Actions Workflow Status](https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/actions/workflows/main.yml/badge.svg)
 ![Coverage Status](https://img.shields.io/codecov/c/github/wp-spaghetti/upload-field-to-youtube-for-acf)
