@@ -84,18 +84,34 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./${{ github.event.repository.name }}/coverage.xml
 
+    # Security Compliance Note for SonarCloud and Snyk Actions:
+    # Both SonarCloud and Snyk require using full commit SHA instead of version tags
+    # or @master/@main for security compliance and to prevent supply chain attacks.
+    # 
+    # To update SHA hashes:
+    # - SonarCloud: https://github.com/SonarSource/sonarqube-scan-action/commits/master/
+    # - Snyk: https://github.com/snyk/actions/commits/master/
+    # Copy the full 40-character commit SHA from the latest commit.
+    #
+    # SonarCloud Configuration Note:
+    # Before running this CI-based analysis, ensure Automatic Analysis is DISABLED
+    # in your SonarCloud project settings (Administration > Analysis Method).
+    # 
+    # Why disable Automatic Analysis:
+    # - Automatic Analysis only analyzes main branch + 5 most recent PRs
+    # - It cannot analyze feature/develop branches that are part of your git-flow
+    # - CI-based analysis provides full control over which branches to analyze
+    # - Cannot run both analysis methods simultaneously (causes build failures)
+    # - CI-based gives better integration with existing GitHub Actions workflow
+    #
+    # To disable: SonarCloud UI → Project → Administration → Analysis Method → 
+    # Turn OFF "Automatic Analysis" and ensure "CI-based analysis" is enabled.
     - name: SonarQube Scan
       if: matrix.wordpress_tag == 'latest'  
-      uses: SonarSource/sonarqube-scan-action@v5.3.1
+      uses: SonarSource/sonarqube-scan-action@5837ebfccaf5b347ae1783644ecff31e2bafa086
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-    # Snyk Actions Security Note:
-    # Unlike other GitHub Actions, Snyk does not use semantic versioning.
-    # For security compliance (as recommended by SonarQube), we use specific commit SHA
-    # instead of @master to ensure immutable and verifiable builds.
-    # To update: visit https://github.com/snyk/actions/commits/master/ 
-    # and copy the latest commit SHA.
     - name: Run Snyk to check for vulnerabilities
       if: matrix.wordpress_tag == 'latest'
       uses: snyk/actions/php@e2221410bff24446ba09102212d8bc75a567237d
