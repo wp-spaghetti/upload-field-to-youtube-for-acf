@@ -62,7 +62,7 @@ return [
         'video_id_retrieval_initial_sleep' => Environment::getInt('WPSPAGHETTI_UFTYFACF_VIDEO_ID_RETRIEVAL_INITIAL_SLEEP', 2), // Initial sleep before first attempt in seconds
     ])),
 
-    'allowed_video_mime_types' => \DI\factory(static fn (ContainerInterface $container) => apply_filters($container->get('plugin_prefix').'_allowed_video_mime_types', [
+    'allowed_video_mime_types' => \DI\factory(static fn (ContainerInterface $container): array => apply_filters($container->get('plugin_prefix').'_allowed_video_mime_types', [
         // Common video formats supported by YouTube
         'mp4' => 'video/mp4',
         'avi' => 'video/avi',
@@ -79,6 +79,135 @@ return [
         'mts' => 'video/mp2t',
         'ts' => 'video/mp2t',
     ])),
+
+    'allowed_html' => static function (ContainerInterface $container): array {
+        if (!function_exists('wp_kses_allowed_html')) {
+            // @phpstan-ignore-next-line
+            require_once ABSPATH.'wp-includes/kses.php';
+        }
+
+        /**
+         * @param array|string $context The context for which to retrieve tags.
+         *                              Allowed values are 'post', 'strip', 'data', 'entities',
+         *                              or the name of a field filter such as 'pre_user_description',
+         *                              or an array of allowed HTML elements and attributes.
+         *
+         * @return array an array of allowed HTML elements and their attributes
+         */
+        $allowed_html = wp_kses_allowed_html('post');
+
+        $tags = [
+            // Form container (missing from WordPress default)
+            'form' => [
+                'action' => true,
+                'method' => true,
+                'enctype' => true,
+                'name' => true,
+                'id' => true,
+                'class' => true,
+                'style' => true,
+                'data-*' => true,
+                'aria-label' => true,
+                'aria-labelledby' => true,
+                'role' => true,
+            ],
+
+            // Input fields (missing from WordPress default)
+            'input' => [
+                'type' => true,
+                'name' => true,
+                'id' => true,
+                'value' => true,
+                'class' => true,
+                'style' => true,
+                'placeholder' => true,
+                'required' => true,
+                'disabled' => true,
+                'readonly' => true,
+                'checked' => true,
+                'min' => true,
+                'max' => true,
+                'step' => true,
+                'maxlength' => true,
+                'pattern' => true,
+                'data-*' => true,
+                'aria-label' => true,
+                'aria-labelledby' => true,
+                'aria-describedby' => true,
+                'role' => true,
+            ],
+
+            // Select dropdowns (missing from WordPress default)
+            'select' => [
+                'name' => true,
+                'id' => true,
+                'class' => true,
+                'style' => true,
+                'multiple' => true,
+                'size' => true,
+                'required' => true,
+                'disabled' => true,
+                'data-*' => true,
+                'aria-label' => true,
+                'aria-labelledby' => true,
+                'aria-describedby' => true,
+                'role' => true,
+            ],
+
+            // Option elements (missing from WordPress default)
+            'option' => [
+                'value' => true,
+                'selected' => true,
+                'disabled' => true,
+                'class' => true,
+                'style' => true,
+                'data-*' => true,
+            ],
+
+            // Option groups (missing from WordPress default)
+            'optgroup' => [
+                'label' => true,
+                'disabled' => true,
+                'class' => true,
+                'style' => true,
+                'data-*' => true,
+            ],
+
+            // Button already exists, but might need form-specific attributes
+            'button' => [
+                'onclick' => true, // Often needed for form interactions
+            ],
+
+            // Legend already exists, might need disabled attribute
+            'legend' => [
+                'disabled' => true, // For fieldset functionality
+            ],
+
+            // Fieldset already exists, might need disabled attribute
+            'fieldset' => [
+                'disabled' => true, // Essential for fieldset functionality
+            ],
+
+            // Textarea already exists, might need additional form attributes
+            'textarea' => [
+                'placeholder' => true,
+                'required' => true,
+                'maxlength' => true,
+                'minlength' => true,
+                'wrap' => true,
+            ],
+        ];
+
+        foreach ($tags as $tag => $attrs) {
+            if (isset($allowed_html[$tag])) {
+                $allowed_html[$tag] = array_merge($allowed_html[$tag], $attrs);
+            } else {
+                $allowed_html[$tag] = $attrs;
+            }
+        }
+
+        return apply_filters($container->get('plugin_prefix').'_allowed_html', $allowed_html);
+    },
 
     'wp_filesystem' => static function (): WP_Filesystem_Direct {
         // https://wordpress.stackexchange.com/a/370377/99214

@@ -918,7 +918,7 @@ class Field extends \acf_field
                     wp_nonce_field();
                     echo '<input type="hidden" name="action" value="'.esc_attr($this->container->get('plugin_prefix').'_save_settings').'">';
 
-                    echo wp_kses_post($output);
+                    echo wp_kses($output, $this->container->get('allowed_html'));
 
                     submit_button(__('Save Settings', 'upload-field-to-youtube-for-acf'));
                     echo '</form>';
