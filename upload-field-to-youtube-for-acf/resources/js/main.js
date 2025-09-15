@@ -85,12 +85,10 @@
 		showError(message, debugInfo = null) {
 			this.clearResponse();
 			this.responseDiv.classList.add('notice', 'notice-error');
-			let content = '<strong>' + acf._e(this.field.data('type'), 'error_while_uploading') + '</strong>';
-			
+			let content = '<strong>' + message + '</strong>';	
 			if (this.debug && debugInfo) {
 				content += '<br><small>' + debugInfo + '</small>';
-			}
-			
+			}		
 			this.responseDiv.innerHTML = content;
 		}
 
@@ -189,7 +187,8 @@
 					let excerpt = '';
 					const file = this.fileInput && this.fileInput.files.length > 0 ? this.fileInput.files[0] : null;
 
-					const isGutenberg = !!window.wp && !!window.wp.data;
+					//https://github.com/WordPress/gutenberg/issues/12200#issuecomment-459560313
+					const isGutenberg = document.body.classList.contains('block-editor-page');
 
 					if (isGutenberg) {
 						//https://wordpress.stackexchange.com/a/351788/99214
