@@ -11,6 +11,7 @@
 + src/**
 + vendor/
 - vendor/bin/
+- vendor/paragonie/random_compat/build-phar.sh
 - vendor/symfony/console/Resources/
 + vendor/**
 + composer.json
