@@ -36,7 +36,7 @@ if (file_exists(__DIR__.'/vendor/autoload.php')) {
     require __DIR__.'/vendor/autoload.php';
 }
 
-define('WPSPAGHETTI_UFTYFACF_VERSION', '0.4.0');
+define('WPSPAGHETTI_UFTYFACF_FILE', __FILE__);
 define('WPSPAGHETTI_UFTYFACF_BASENAME', plugin_basename(__FILE__));
 define('WPSPAGHETTI_UFTYFACF_NAME', dirname(WPSPAGHETTI_UFTYFACF_BASENAME));
 define('WPSPAGHETTI_UFTYFACF_UNDERNAME', str_replace('-', '_', WPSPAGHETTI_UFTYFACF_NAME));
