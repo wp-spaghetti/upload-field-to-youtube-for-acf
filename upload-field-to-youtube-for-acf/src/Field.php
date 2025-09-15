@@ -575,11 +575,6 @@ class Field extends \acf_field
             $this->container->get('plugin_prefix')
         );
 
-        // Add Vite dev scripts for HMR in development
-        if ($this->env['debug']) {
-            Vite::devScripts();
-        }
-
         // https://wordpress.stackexchange.com/a/273996/99214
         // https://stackoverflow.com/a/59665364/3929620
         // No need to enqueue -core, because dependancies are set.
@@ -621,6 +616,11 @@ class Field extends \acf_field
             'css/main',
             ['acf-input']
         );
+
+        // Add Vite dev scripts for HMR in development
+        if ($this->env['debug']) {
+            Vite::devScripts();
+        }
     }
 
     /**
@@ -1493,7 +1493,7 @@ class Field extends \acf_field
      */
     private function get_cron_hook(): string
     {
-        return $this->container->get('plugin_prefix').'_check_oauth_token';
+        return $this->get_hook_prefix().'check_oauth_token';
     }
 
     /**
