@@ -27,7 +27,16 @@ return [
     'plugin_name' => WPSPAGHETTI_UFTYFACF_NAME, // Single words, no spaces, hyphens allowed
     'plugin_undername' => WPSPAGHETTI_UFTYFACF_UNDERNAME, // Single words, no spaces, underscores allowed
 
-    'field_defaults' => \DI\factory(static fn (ContainerInterface $container) => apply_filters($container->get('plugin_prefix').'_field_defaults', [
+    'plugin_data' => \DI\factory(static function () {
+        if (!function_exists('get_plugin_data')) {
+            // @phpstan-ignore-next-line
+            require_once ABSPATH.'wp-admin/includes/plugin.php';
+        }
+
+        return get_plugin_data(WPSPAGHETTI_UFTYFACF_FILE, false, false);
+    }),
+
+    'field_defaults' => \DI\factory(static fn (ContainerInterface $container): array => apply_filters($container->get('plugin_prefix').'_field_defaults', [
         'category_id' => 22, // People & Blogs
         'tags' => !empty($_SERVER['HTTP_HOST']) ? str_replace('www.', '', sanitize_text_field((string) wp_unslash($_SERVER['HTTP_HOST']))) : '',
         'privacy_status' => 'unlisted',
@@ -38,8 +47,8 @@ return [
         'api_delete_on_post_delete' => false,
     ])),
 
-    'env_settings' => \DI\factory(static fn (ContainerInterface $container) => apply_filters($container->get('plugin_prefix').'_env_settings', [
-        'version' => WPSPAGHETTI_UFTYFACF_VERSION,
+    'env_settings' => \DI\factory(static fn (ContainerInterface $container): array => apply_filters($container->get('plugin_prefix').'_env_settings', [
+        'version' => $container->get('plugin_data')['Version'] ?? '0.0.0',
         'url' => WPSPAGHETTI_UFTYFACF_URL,
         'path' => WPSPAGHETTI_UFTYFACF_PATH,
         'debug' => Environment::isDebug(),

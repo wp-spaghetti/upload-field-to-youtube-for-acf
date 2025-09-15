@@ -12,7 +12,6 @@ declare(strict_types=1);
  */
 
 // Plugin constants that are defined in the main plugin file
-define('WPSPAGHETTI_UFTYFACF_VERSION', '0.1.0');
 define('WPSPAGHETTI_UFTYFACF_BASENAME', 'my-plugin/my-plugin.php');
 define('WPSPAGHETTI_UFTYFACF_NAME', 'my-plugin');
 define('WPSPAGHETTI_UFTYFACF_UNDERNAME', 'my_plugin');

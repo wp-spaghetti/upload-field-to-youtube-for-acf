@@ -24,7 +24,6 @@ if (file_exists(dirname(__DIR__).'/vendor/php-stubs/acf-pro-stubs/acf-pro-stubs.
 }
 
 // Define plugin constants that Psalm needs to know about
-define('WPSPAGHETTI_UFTYFACF_VERSION', '0.1.0');
 define('WPSPAGHETTI_UFTYFACF_BASENAME', 'my-plugin/my-plugin.php');
 define('WPSPAGHETTI_UFTYFACF_NAME', 'my-plugin');
 define('WPSPAGHETTI_UFTYFACF_UNDERNAME', 'my_plugin');
@@ -68,6 +67,7 @@ if (!function_exists('wpspaghetti_uftyfacf_get_container')) {
                     'plugin_prefix' => 'my-plugin',
                     'plugin_name' => 'my-plugin',
                     'plugin_undername' => 'my_plugin',
+                    'plugin_data' => ['Version' => '0.1.0'],
                     'field_defaults' => [],
                     'env_settings' => [],
                     default => new stdClass()

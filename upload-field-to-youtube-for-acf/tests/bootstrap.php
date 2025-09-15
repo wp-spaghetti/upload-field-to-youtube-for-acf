@@ -55,10 +55,6 @@ if (!defined('WPMU_PLUGIN_DIR')) {
 }
 
 // Mock plugin constants for testing
-if (!defined('WPSPAGHETTI_UFTYFACF_VERSION')) {
-    define('WPSPAGHETTI_UFTYFACF_VERSION', '0.1.0');
-}
-
 if (!defined('WPSPAGHETTI_UFTYFACF_BASENAME')) {
     define('WPSPAGHETTI_UFTYFACF_BASENAME', 'my-plugin/my-plugin.php');
 }

@@ -36,7 +36,6 @@
         <const name="WPMU_PLUGIN_DIR" value="/tmp/wp-content/mu-plugins"/>
         
         <!-- Plugin constants -->
-        <const name="WPSPAGHETTI_UFTYFACF_VERSION" value="0.1.0"/>
         <const name="WPSPAGHETTI_UFTYFACF_BASENAME" value="upload-field-to-youtube-for-acf/upload-field-to-youtube-for-acf.php"/>
         <const name="WPSPAGHETTI_UFTYFACF_NAME" value="upload-field-to-youtube-for-acf"/>
         <const name="WPSPAGHETTI_UFTYFACF_UNDERNAME" value="upload_field_to_youtube_for_acf"/>
