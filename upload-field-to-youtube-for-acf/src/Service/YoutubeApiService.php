@@ -78,6 +78,8 @@ class YoutubeApiService
                 'privacy_status' => $privacy_status,
             ]);
 
+            $this->google_client_manager->check_oauth_token();
+
             // Ensure client is not null before creating YouTube service
             $client = $this->google_client_manager->get_google_client();
             if (null === $client) {
@@ -547,6 +549,8 @@ class YoutubeApiService
             'playlist_id' => $playlist_id,
             'privacy_status' => $privacy_status,
         ]);
+
+        $this->google_client_manager->check_oauth_token();
 
         // Ensure client is not null before creating YouTube service
         $client = $this->google_client_manager->get_google_client();
