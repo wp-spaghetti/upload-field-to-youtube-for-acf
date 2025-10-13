@@ -169,6 +169,12 @@ class GoogleClientManager
                     if (!empty($refresh_token)) {
                         $new_token = $client->fetchAccessTokenWithRefreshToken($refresh_token);
 
+                        // Check if fetchAccessTokenWithRefreshToken returned an error
+                        if (isset($new_token['error'])) {
+                            // translators: %s: token error description
+                            throw new \UnexpectedValueException(\sprintf(__('Token refresh failed: %s', 'upload-field-to-youtube-for-acf'), $new_token['error_description'] ?? $new_token['error']));
+                        }
+
                         // Validate the new token before setting it
                         if (!$this->cache_handler->is_valid_token_format($new_token)) {
                             throw new \UnexpectedValueException(__('New token format validation failed', 'upload-field-to-youtube-for-acf'));
@@ -188,6 +194,7 @@ class GoogleClientManager
                 $this->logger->error($exception, [
                     'access_token' => $this->cache_handler->sanitize_token_for_logging($access_token),
                     'refresh_token' => isset($refresh_token) ? $this->cache_handler->sanitize_token_for_logging($refresh_token) : null,
+                    'new_token' => isset($new_token) ? $this->cache_handler->sanitize_token_for_logging($new_token) : null,
                     'cache_info' => $this->cache_handler->get_cache_info(),
                 ]);
                 $this->cache_handler->delete_access_token();
