@@ -123,7 +123,7 @@ jobs:
         
     - name: Upload Snyk results to GitHub Code Scanning
       if: matrix.wordpress_tag == 'latest'
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: snyk.sarif
         
