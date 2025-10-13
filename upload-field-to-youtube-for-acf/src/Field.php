@@ -177,15 +177,22 @@ class Field extends \acf_field
 
         parent::__construct();
 
+        $prefix = $this->container->get('plugin_prefix');
+
         add_action('admin_menu', [$this, 'admin_menu'], 10, 0);
         add_action('admin_init', [$this, 'admin_init'], 10, 0);
         add_action('admin_notices', [$this, 'admin_notices'], 10, 0);
         add_action('before_delete_post', [$this, 'before_delete_post']);
-        add_action('wp_ajax_get_youtube_upload_url', [$this, 'wp_ajax_get_youtube_upload_url'], 10, 0);
-        add_action('wp_ajax_upload_video_to_youtube', [$this, 'wp_ajax_upload_video_to_youtube'], 10, 0);
-        add_action('wp_ajax_get_video_id_from_upload', [$this, 'wp_ajax_get_video_id_from_upload'], 10, 0);
-        add_action('wp_ajax_save_youtube_video_id', [$this, 'wp_ajax_save_youtube_video_id'], 10, 0);
-        add_action('wp_ajax_get_videos_by_playlist', [$this, 'wp_ajax_get_videos_by_playlist'], 10, 0);
+        /** @psalm-suppress HookNotFound */
+        add_action("wp_ajax_{$prefix}_get_youtube_upload_url", [$this, 'wp_ajax_get_youtube_upload_url'], 10, 0);
+        /** @psalm-suppress HookNotFound */
+        add_action("wp_ajax_{$prefix}_upload_video_to_youtube", [$this, 'wp_ajax_upload_video_to_youtube'], 10, 0);
+        /** @psalm-suppress HookNotFound */
+        add_action("wp_ajax_{$prefix}_get_video_id_from_upload", [$this, 'wp_ajax_get_video_id_from_upload'], 10, 0);
+        /** @psalm-suppress HookNotFound */
+        add_action("wp_ajax_{$prefix}_save_youtube_video_id", [$this, 'wp_ajax_save_youtube_video_id'], 10, 0);
+        /** @psalm-suppress HookNotFound */
+        add_action("wp_ajax_{$prefix}_get_videos_by_playlist", [$this, 'wp_ajax_get_videos_by_playlist'], 10, 0);
 
         /** @psalm-suppress InvalidArgument */
         // @phpstan-ignore-next-line argument.type
@@ -606,6 +613,7 @@ class Field extends \acf_field
         // Use underscores or camelCasing.
         wp_localize_script($this->container->get('plugin_prefix'), $this->container->get('plugin_undername').'_obj', [
             '_wpnonce' => wp_create_nonce(),
+            'prefix' => $this->container->get('plugin_prefix'),
             'postStatus' => $post ? $post->post_status : null,
             'serverUpload' => $this->env['server_upload'],
             'debug' => $this->env['debug'],

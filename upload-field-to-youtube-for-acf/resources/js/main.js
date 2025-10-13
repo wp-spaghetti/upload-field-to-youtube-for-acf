@@ -299,7 +299,7 @@
 				this.spinner.style.display = 'block';
 
 				const formData = new FormData();
-				formData.append('action', 'get_videos_by_playlist');
+				formData.append('action', window[this.field.data('type') + '_obj'].prefix + '_get_videos_by_playlist');
 				formData.append('field_key', this.field.data('key'));
 				formData.append('playlist_id', this.playlistId);
 				formData.append('_wpnonce', window[this.field.data('type') + '_obj']._wpnonce);
@@ -363,7 +363,7 @@
 		 */
 		uploadViaClient(file) {
 		    const formData = new FormData();
-		    formData.append('action', 'get_youtube_upload_url');
+		    formData.append('action', window[this.field.data('type') + '_obj'].prefix + '_get_youtube_upload_url');
 		    formData.append('post_id', this.postId);
 		    formData.append('field_key', this.field.data('key'));
 		    formData.append('_wpnonce', window[this.field.data('type') + '_obj']._wpnonce);
@@ -391,7 +391,7 @@
 		 */
 		uploadViaServer(file) {
 		    const formData = new FormData();
-		    formData.append('action', 'upload_video_to_youtube');
+		    formData.append('action', window[this.field.data('type') + '_obj'].prefix + '_upload_video_to_youtube');
 		    formData.append('post_id', this.postId);
 		    formData.append('field_key', this.field.data('key'));
 		    formData.append('video_file', file);
@@ -580,7 +580,7 @@
 		 */
 		getVideoIdFromUpload(uploadId) {
 		    const formData = new FormData();
-		    formData.append('action', 'get_video_id_from_upload');
+		    formData.append('action', window[this.field.data('type') + '_obj'].prefix + '_get_video_id_from_upload');
 		    formData.append('upload_id', uploadId);
 		    formData.append('post_id', this.postId);
 		    formData.append('field_key', this.field.data('key'));
@@ -757,7 +757,7 @@
 		 */
 		save(videoId) {
 			const formData = new FormData();
-			formData.append('action', 'save_youtube_video_id');
+			formData.append('action', window[this.field.data('type') + '_obj'].prefix + '_save_youtube_video_id');
 			formData.append('post_id', this.postId);
 			formData.append('field_key', this.field.data('key'));
 			formData.append('video_id', videoId);
