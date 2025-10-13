@@ -142,6 +142,7 @@
         "ci": "@check --no-interaction",
         "lint": "@check --tasks=phpcsfixer,phplint,rector",
         "quality": "@check --tasks=phpmnd,phpparser",
+        "rector": "@php -d max_execution_time=0 -d memory_limit=-1 -f ./vendor/bin/rector -- process --ansi --clear-cache",
         "security": "@check --tasks=securitychecker_roave",
         "test": "@check --tasks=phpunit --configuration=./phpunit-9.xml.dist",
         "test:coverage": "vendor/bin/phpunit --coverage-clover=coverage.xml --configuration=./phpunit-9.xml.dist"

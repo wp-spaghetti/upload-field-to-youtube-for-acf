@@ -265,7 +265,7 @@ endif
 	@echo "[wordpress] Flushing rewrite rules"
 	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'wp rewrite flush --allow-root'
 
-	@echo "[wordpress] Changing data folder ownership"
+	@echo "[wordpress] Changing folders ownership"
 # Avoids write permission errors when PHP writes w/ 1001 user
 	@$(DOCKER_COMPOSE) exec -u$(WORDPRESS_CONTAINER_USER) $(WORDPRESS_CONTAINER_NAME) sh -c 'chmod -Rf o+w /tmp/$(PLUGIN_NAME)-plugin/tests/data/wp-cfm || true'
 
@@ -448,7 +448,7 @@ help:
 	@echo "  dev               - Start development server with HMR"
 	@echo "  qa [script]       - Run quality assurance (qa-node + qa-php)"
 	@echo "  deploy            - Start environment, install dependencies and deploy to zip and SVN"
-	@echo "  changelog    	   - Generate CHANGELOG.md with historical releases from git tags
+	@echo "  changelog         - Generate CHANGELOG.md with historical releases from git tags
 	@echo "  down              - Stop environment"
 	@echo ""
 	@echo "Translation Management:"
@@ -460,11 +460,12 @@ help:
 	@echo "  qa                - Run all checks (default: composer check)"
 	@echo "  qa analysis       - Run static analysis (PHPStan, Psalm, etc.)"
 	@echo "  qa lint           - Run code linting (PHP CS Fixer, Rector, etc.)"
+	@echo "  qa rector         - Run Rector only with unlimited memory and time"
 	@echo "  qa security       - Run security checks"
 	@echo "  qa test           - Run unit tests (PHPUnit, etc.)"
 	@echo "  qa test:coverage  - Run unit tests with coverage report"
 	@echo ""
-	@echo "MTA management:"	
+	@echo "MTA management:"
 	@echo "  mta [action]      - Manage MTA daemon (default: status)"
 	@echo "                      Available actions: start, stop, status, restart, queue, test, test-sendmail"
 
