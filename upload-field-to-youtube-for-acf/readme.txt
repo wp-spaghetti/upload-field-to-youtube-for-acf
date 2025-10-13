@@ -13,7 +13,7 @@ Upload Field to YouTube for ACF
 
 == Description ==
 
-__Upload Field to YouTube for ACF__ is a WordPress plugin that allows you to upload videos directly to YouTube via API from the WordPress admin area and/or select existing videos on your YouTube channel based on playlists. It is particularly useful for managing "unlisted" videos that may be associated with Custom Post Types (CPT).
+**Upload Field to YouTube for ACF** is a WordPress plugin that allows you to upload videos directly to YouTube via API from the WordPress admin area and/or select existing videos on your YouTube channel based on playlists. It is particularly useful for managing "unlisted" videos that may be associated with Custom Post Types (CPT).
 
 To use this plugin, you need to configure Google oAuth credentials so the plugin can authenticate with the user's YouTube channel.
 
