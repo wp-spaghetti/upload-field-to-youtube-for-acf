@@ -69,7 +69,24 @@ class CacheHandler
 
         // Ensure token is properly formatted array or null
         if (!\is_array($token) && false !== $token) {
-            $token = null;
+            // Try to decode if it's a JSON string (cache corruption)
+            if (\is_string($token)) {
+                $decoded = json_decode($token, true);
+                if (JSON_ERROR_NONE === json_last_error() && \is_array($decoded)) {
+                    $token = $decoded;
+                    $this->logger->warning('Token was stored as JSON string, decoded successfully', [
+                        'cache_info' => $cache_info,
+                    ]);
+                } else {
+                    $this->logger->error('Invalid token format from cache', [
+                        'token' => $this->sanitize_token_for_logging($token),
+                        'cache_info' => $cache_info,
+                    ]);
+                    $token = null;
+                }
+            } else {
+                $token = null;
+            }
         }
 
         // Filter to modify the retrieved token

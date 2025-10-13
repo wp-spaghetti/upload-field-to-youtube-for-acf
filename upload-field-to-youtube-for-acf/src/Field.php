@@ -183,14 +183,19 @@ class Field extends \acf_field
         add_action('admin_init', [$this, 'admin_init'], 10, 0);
         add_action('admin_notices', [$this, 'admin_notices'], 10, 0);
         add_action('before_delete_post', [$this, 'before_delete_post']);
+
         /** @psalm-suppress HookNotFound */
         add_action("wp_ajax_{$prefix}_get_youtube_upload_url", [$this, 'wp_ajax_get_youtube_upload_url'], 10, 0);
+
         /** @psalm-suppress HookNotFound */
         add_action("wp_ajax_{$prefix}_upload_video_to_youtube", [$this, 'wp_ajax_upload_video_to_youtube'], 10, 0);
+
         /** @psalm-suppress HookNotFound */
         add_action("wp_ajax_{$prefix}_get_video_id_from_upload", [$this, 'wp_ajax_get_video_id_from_upload'], 10, 0);
+
         /** @psalm-suppress HookNotFound */
         add_action("wp_ajax_{$prefix}_save_youtube_video_id", [$this, 'wp_ajax_save_youtube_video_id'], 10, 0);
+
         /** @psalm-suppress HookNotFound */
         add_action("wp_ajax_{$prefix}_get_videos_by_playlist", [$this, 'wp_ajax_get_videos_by_playlist'], 10, 0);
 
