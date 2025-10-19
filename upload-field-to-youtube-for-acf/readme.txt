@@ -25,6 +25,33 @@ To use this plugin, you need to configure Google oAuth credentials so the plugin
 
 @see https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf?tab=readme-ov-file#installation
 
+== External Services ==
+
+This plugin connects to the **YouTube Data API v3** provided by Google LLC to upload and manage videos on YouTube.
+
+= What data is sent =
+
+* Video files selected by the user through the ACF field
+* Video metadata (title, description, tags, privacy settings, category)
+* OAuth authentication tokens for YouTube channel access
+* User's YouTube channel information
+
+= When data is sent =
+
+* During video upload operations initiated by the user
+* When retrieving video information from YouTube playlists
+* During OAuth authentication and token refresh processes
+* When fetching playlist data from the user's YouTube channel
+
+= Service Information =
+
+* **Service Provider:** Google LLC
+* **API Endpoint:** https://www.googleapis.com/upload/youtube/v3/
+* **Terms of Service:** https://developers.google.com/youtube/terms/api-services-terms-of-service
+* **Privacy Policy:** https://policies.google.com/privacy
+
+This information is provided for legal compliance and transparency. Users should review Google's terms and privacy policy before using this plugin to upload content to YouTube.
+
 == Changelog ==
 
 @see https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/blob/main/CHANGELOG.md
