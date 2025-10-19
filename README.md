@@ -117,10 +117,10 @@ If you use Composer to manage WordPress plugins, you can install it from this re
             "type": "package",
             "package": {
                 "name": "wp-spaghetti/upload-field-to-youtube-for-acf",
-                "version": "0.4.1",
+                "version": "0.4.2",
                 "type": "wordpress-plugin",
                 "dist": {
-                    "url": "https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/releases/download/v0.4.1/upload-field-to-youtube-for-acf.zip",
+                    "url": "https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/releases/download/v0.4.2/upload-field-to-youtube-for-acf.zip",
                     "type": "zip"
                 }
             }
@@ -151,10 +151,10 @@ For installations that need updates managed via Git instead of WordPress.org, us
             "type": "package",
             "package": {
                 "name": "wp-spaghetti/upload-field-to-youtube-for-acf",
-                "version": "0.4.1",
+                "version": "0.4.2",
                 "type": "wordpress-plugin",
                 "dist": {
-                    "url": "https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/releases/download/v0.4.1/upload-field-to-youtube-for-acf--with-git-updater.zip",
+                    "url": "https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/releases/download/v0.4.2/upload-field-to-youtube-for-acf--with-git-updater.zip",
                     "type": "zip"
                 }
             }
@@ -527,6 +527,34 @@ apply_filters('wpspaghetti_uftyfacf_cachehandler_save_access_token_token', $toke
 **Upload Field to YouTube for ACF** includes comprehensive logging through the integrated [WP Logger](https://github.com/wp-spaghetti/wp-logger) library.
 
 For detailed information about log levels, log files, and advanced logging configuration, see the [WP Logger documentation](https://github.com/wp-spaghetti/wp-logger).
+
+## External Services
+
+This plugin connects to the **YouTube Data API v3** provided by Google LLC to upload and manage videos on YouTube.
+
+### What data is sent
+
+* Video files selected by the user through the ACF field
+* Video metadata (title, description, tags, privacy settings, category)
+* OAuth authentication tokens for YouTube channel access
+* User's YouTube channel information
+
+### When data is sent
+
+* During video upload operations initiated by the user
+* When retrieving video information from YouTube playlists
+* During OAuth authentication and token refresh processes
+* When fetching playlist data from the user's YouTube channel
+
+### Service Information
+
+* **Service Provider:** Google LLC
+* **API Endpoint:** https://www.googleapis.com/upload/youtube/v3/
+* **Terms of Service:** https://developers.google.com/youtube/terms/api-services-terms-of-service
+* **Privacy Policy:** https://policies.google.com/privacy
+
+This information is provided for legal compliance and transparency. Users should review Google's terms and privacy policy before using this plugin to upload content to YouTube.
+
 
 ## More info
 
