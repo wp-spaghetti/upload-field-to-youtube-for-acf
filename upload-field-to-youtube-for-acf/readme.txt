@@ -1,7 +1,7 @@
 === Upload Field to YouTube for ACF ===
 Contributors: Frugan
 Tags: acf, fields, upload, video, youtube
-Stable tag: 0.4.1
+Stable tag: 0.4.2
 Requires at least: 5.6
 Tested up to: 6.8
 Requires PHP: 8.0
