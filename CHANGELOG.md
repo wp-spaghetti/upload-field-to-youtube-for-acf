@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.2](https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/compare/v0.4.1...v0.4.2) (2025-10-19)
 
+## [0.4.2](https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/compare/v0.4.1...v0.4.2) (2025-10-19)
+
 # [0.4.0](https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/compare/v0.3.0...v0.4.0) (2025-09-15)
 
 ### Features
