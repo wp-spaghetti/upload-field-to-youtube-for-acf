@@ -55,7 +55,7 @@ class Field extends \acf_field
         private CacheHandler $cache_handler,
         private Logger $logger
     ) {
-        $this->init_hook($container);
+        $this->init_hook($this->container);
 
         /*
          * Field type reference used in PHP and JS code.
@@ -198,13 +198,6 @@ class Field extends \acf_field
 
         /** @psalm-suppress HookNotFound */
         add_action("wp_ajax_{$prefix}_get_videos_by_playlist", [$this, 'wp_ajax_get_videos_by_playlist'], 10, 0);
-
-        /** @psalm-suppress InvalidArgument */
-        // @phpstan-ignore-next-line argument.type
-        $this->add_action('check_oauth_token', [$this->google_client_manager, 'check_oauth_token'], 10, 0);
-
-        // Migrate old options format if needed
-        $this->migrate_options();
     }
 
     /**
@@ -957,91 +950,6 @@ class Field extends \acf_field
     }
 
     /**
-     * Activate the plugin and schedule necessary cron jobs.
-     *
-     * This static method is called when the plugin is activated and sets up
-     * scheduled tasks for token maintenance and other periodic operations.
-     *
-     * @throws \Exception if an error occurs during activation
-     */
-    public static function activate(): void
-    {
-        $container = wpspaghetti_uftyfacf_get_container();
-        $instance = $container->get(self::class);
-        $hook = $instance->get_cron_hook();
-        $schedule = $instance->get_cron_schedule();
-
-        // Action before activation
-        $instance->do_action(__FUNCTION__.'_before', $instance, $hook, $schedule);
-
-        if (!wp_next_scheduled($hook)) {
-            $result = wp_schedule_event(time(), $schedule, $hook);
-
-            if (false === $result) {
-                $container->get(Logger::class)->error('Failed to schedule cron event', [
-                    'hook' => $hook,
-                    'schedule' => $schedule,
-                    'default_schedule' => $instance->env['cron_schedule'],
-                ]);
-            } else {
-                $container->get(Logger::class)->info('Cron event scheduled successfully', [
-                    'hook' => $hook,
-                    'schedule' => $schedule,
-                    'next_run' => wp_next_scheduled($hook),
-                    'default_schedule' => $instance->env['cron_schedule'],
-                ]);
-            }
-        }
-
-        // Action after activation
-        $instance->do_action(__FUNCTION__.'_after', $instance, $hook, $schedule, $result ?? null);
-    }
-
-    /**
-     * Deactivate the plugin and clean up resources.
-     *
-     * This static method is called when the plugin is deactivated and handles
-     * cleanup of tokens, scheduled events, and temporary data.
-     *
-     * @param bool $network_deactivating whether this is a network deactivation
-     *                                   for multisite installations
-     *
-     * @throws \Exception if an error occurs during deactivation
-     */
-    public static function deactivate($network_deactivating = false): void
-    {
-        $container = wpspaghetti_uftyfacf_get_container();
-        $instance = $container->get(self::class);
-        $hook = $instance->get_cron_hook();
-
-        // Action before deactivation
-        $instance->do_action(__FUNCTION__.'_before', $network_deactivating, $instance, $hook);
-
-        // Delete access token
-        $container->get(CacheHandler::class)->delete_access_token();
-
-        // Unschedule cron
-        $timestamp = wp_next_scheduled($hook);
-        if ($timestamp) {
-            $result = wp_unschedule_event($timestamp, $hook);
-
-            if (false === $result) {
-                $container->get(Logger::class)->warning('Failed to unschedule cron event', [
-                    'hook' => $hook,
-                    'timestamp' => $timestamp,
-                ]);
-            } else {
-                $container->get(Logger::class)->info('Cron event unscheduled successfully', [
-                    'hook' => $hook,
-                ]);
-            }
-        }
-
-        // Action after deactivation
-        $instance->do_action(__FUNCTION__.'_after', $network_deactivating, $instance, $hook, $timestamp);
-    }
-
-    /**
      * Get YouTube upload URL for resumable upload.
      * This method is called via AJAX to obtain a unique upload URL
      * for uploading a video file directly to YouTube.
@@ -1394,32 +1302,6 @@ class Field extends \acf_field
     }
 
     /**
-     * Get cron status information for debugging.
-     *
-     * @return array<string, mixed> associative array with cron status details
-     */
-    public function get_cron_status(): array
-    {
-        $hook = $this->get_cron_hook();
-        $schedule = $this->get_cron_schedule();
-        $next_run = wp_next_scheduled($hook);
-
-        $status = [
-            'hook' => $hook,
-            'schedule' => $schedule,
-            'default_schedule' => $this->env['cron_schedule'],
-            'is_scheduled' => (bool) $next_run,
-            'next_run' => $next_run,
-            'next_run_formatted' => $next_run ? wp_date('Y-m-d H:i:s', $next_run) : null,
-            'available_schedules' => array_keys(wp_get_schedules()),
-            'env_debug' => $this->env['debug'],
-        ];
-
-        // Allow third parties to add info
-        return $this->apply_filters(__FUNCTION__.'_status', $status);
-    }
-
-    /**
      * Save video ID to ACF field with validation.
      *
      * @param string $video_id          The YouTube video ID
@@ -1471,100 +1353,5 @@ class Field extends \acf_field
         $this->do_action(__FUNCTION__.'_after', $post_id, $video_id, $field_key);
 
         return true;
-    }
-
-    /**
-     * Get the cron schedule for OAuth token checks.
-     *
-     * @return string the cron schedule identifier
-     *
-     * @throws \Exception if an error occurs while retrieving the schedule
-     */
-    private function get_cron_schedule(): string
-    {
-        // Allow customization via filter
-        $schedule = $this->apply_filters(__FUNCTION__.'_cron_schedule', $this->env['cron_schedule']);
-
-        // Validate schedule exists in WordPress
-        $schedules = wp_get_schedules();
-        if (!isset($schedules[$schedule])) {
-            $this->logger->warning('Invalid cron schedule specified, falling back to daily', [
-                'requested_schedule' => $schedule,
-                'available_schedules' => array_keys($schedules),
-                'default_schedule' => $this->env['cron_schedule'],
-            ]);
-            $schedule = 'daily';
-        }
-
-        return $schedule;
-    }
-
-    /**
-     * Get the cron hook name.
-     *
-     * @return string the cron hook name
-     */
-    private function get_cron_hook(): string
-    {
-        return $this->get_hook_prefix().'check_oauth_token';
-    }
-
-    /**
-     * Migrate options from old hyphen format to underscore format if needed.
-     */
-    private function migrate_options(): void
-    {
-        // Define migrations: old_key => new_key
-        $option_migrations = [
-            $this->container->get('plugin_name').'__access_token' => $this->container->get('plugin_prefix').'_access_token',
-            $this->container->get('plugin_name').'__activated' => $this->container->get('plugin_prefix').'_activated',
-        ];
-
-        // Migrate options
-        foreach ($option_migrations as $old_key => $new_key) {
-            $this->migrate_option($old_key, $new_key);
-        }
-
-        // Migrate scheduled events: old_hook => new_hook
-        $hook_migrations = [
-            $this->container->get('plugin_name').'__check_oauth_token' => $this->get_cron_hook(),
-        ];
-
-        // Migrate scheduled events
-        foreach ($hook_migrations as $old_hook => $new_hook) {
-            $this->migrate_scheduled_event($old_hook, $new_hook);
-        }
-    }
-
-    /**
-     * Migrate a single option from old key to new key.
-     */
-    private function migrate_option(string $old_key, string $new_key): void
-    {
-        if ($old_key === $new_key) {
-            return;
-        }
-
-        $old_value = get_option($old_key);
-        if ($old_value && !get_option($new_key)) {
-            update_option($new_key, $old_value);
-            delete_option($old_key);
-        }
-    }
-
-    /**
-     * Migrate a scheduled event from old hook to new hook.
-     */
-    private function migrate_scheduled_event(string $old_hook, string $new_hook): void
-    {
-        if ($old_hook === $new_hook) {
-            return;
-        }
-
-        $timestamp = wp_next_scheduled($old_hook);
-        if ($timestamp && !wp_next_scheduled($new_hook)) {
-            wp_unschedule_event($timestamp, $old_hook);
-            wp_schedule_event(time(), 'hourly', $new_hook);
-        }
     }
 }

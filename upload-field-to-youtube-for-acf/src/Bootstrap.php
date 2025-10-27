@@ -14,6 +14,8 @@ declare(strict_types=1);
 namespace WpSpaghetti\UFTYFACF;
 
 use DI\Container;
+use WpSpaghetti\UFTYFACF\Service\ActivationService;
+use WpSpaghetti\UFTYFACF\Service\DeactivationService;
 use WpSpaghetti\UFTYFACF\Trait\HookTrait;
 
 if (!\defined('ABSPATH')) {
@@ -32,6 +34,10 @@ class Bootstrap
      */
     private Field $field_instance;
 
+    private ActivationService $activation_service;
+
+    private DeactivationService $deactivation_service;
+
     /**
      * Constructor.
      *
@@ -40,11 +46,12 @@ class Bootstrap
     public function __construct(
         private Container $container
     ) {
-        $this->init_hook($container);
+        $this->init_hook($this->container);
 
         $this->do_action(__FUNCTION__.'_before');
 
-        $this->field_instance = $this->apply_filters(__FUNCTION__.'_field_instance', $this->container->get(Field::class));
+        $this->activation_service = $this->container->get(ActivationService::class);
+        $this->deactivation_service = $this->container->get(DeactivationService::class);
 
         add_action('muplugins_loaded', [$this, 'muplugins_loaded'], 10, 0);
         add_action('plugins_loaded', [$this, 'plugins_loaded'], 10, 0);
@@ -56,8 +63,8 @@ class Bootstrap
             delete_option($this->container->get('plugin_prefix').'_activated');
 
             // Use closures to avoid PHPStan callback type issues with array{mixed, 'method'} format
-            register_activation_hook(WPSPAGHETTI_UFTYFACF_BASENAME, fn () => [$this->field_instance, 'activate']);
-            register_deactivation_hook(WPSPAGHETTI_UFTYFACF_BASENAME, fn () => [$this->field_instance, 'deactivate']);
+            register_activation_hook(WPSPAGHETTI_UFTYFACF_BASENAME, fn () => $this->activation_service->activate());
+            register_deactivation_hook(WPSPAGHETTI_UFTYFACF_BASENAME, fn () => $this->deactivation_service->deactivate());
         }
 
         $this->do_action(__FUNCTION__.'_after');
@@ -77,7 +84,7 @@ class Bootstrap
         // This hook is available for future mu-plugin specific functionality
         if ($this->is_mu_plugin()) {
             // Allow extensions to hook into mu-plugin loading
-            $this->do_action(__FUNCTION__.'_muplugin_loaded');
+            $this->do_action(__FUNCTION__.'_after');
         }
     }
 
@@ -95,7 +102,7 @@ class Bootstrap
         // This hook is available for future plugin specific functionality
         if (!$this->is_mu_plugin()) {
             // Allow extensions to hook into plugin loading
-            $this->do_action(__FUNCTION__.'_plugin_loaded');
+            $this->do_action(__FUNCTION__.'_after');
         }
     }
 
@@ -112,13 +119,14 @@ class Bootstrap
             return;
         }
 
-        if ($this->is_mu_plugin() && !get_option($this->container->get('plugin_prefix').'_activated')) {
-            $this->field_instance::activate();
-            update_option($this->container->get('plugin_prefix').'_activated', true);
+        if ($this->is_mu_plugin() && !$this->activation_service->is_activated()) {
+            $this->activation_service->activate_mu_plugin();
 
             $this->do_action(__FUNCTION__.'_mu_plugin_activated');
         }
 
+        // Instantiate Field only when ACF is available
+        $this->field_instance = $this->apply_filters(__FUNCTION__.'_field_instance', $this->container->get(Field::class));
         acf_register_field_type($this->field_instance);
 
         $this->do_action(__FUNCTION__.'_after');
@@ -165,7 +173,7 @@ class Bootstrap
      */
     private function deactivate(): void
     {
-        deactivate_plugins(WPSPAGHETTI_UFTYFACF_BASENAME);
+        deactivate_plugins(WPSPAGHETTI_UFTYFACF_BASENAME, true);
     }
 
     /**

@@ -117,10 +117,10 @@ If you use Composer to manage WordPress plugins, you can install it from this re
             "type": "package",
             "package": {
                 "name": "wp-spaghetti/upload-field-to-youtube-for-acf",
-                "version": "0.4.2",
+                "version": "0.5.0",
                 "type": "wordpress-plugin",
                 "dist": {
-                    "url": "https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/releases/download/v0.4.2/upload-field-to-youtube-for-acf.zip",
+                    "url": "https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/releases/download/v0.5.0/upload-field-to-youtube-for-acf.zip",
                     "type": "zip"
                 }
             }
@@ -151,10 +151,10 @@ For installations that need updates managed via Git instead of WordPress.org, us
             "type": "package",
             "package": {
                 "name": "wp-spaghetti/upload-field-to-youtube-for-acf",
-                "version": "0.4.2",
+                "version": "0.5.0",
                 "type": "wordpress-plugin",
                 "dist": {
-                    "url": "https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/releases/download/v0.4.2/upload-field-to-youtube-for-acf--with-git-updater.zip",
+                    "url": "https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/releases/download/v0.5.0/upload-field-to-youtube-for-acf--with-git-updater.zip",
                     "type": "zip"
                 }
             }
@@ -277,24 +277,23 @@ define('WPSPAGHETTI_UFTYFACF_LOGGER_DISABLED', true);
 
 ```php
 // Bootstrap initialization
-do_action('wpspaghetti_uftyfacf_bootstrap_before', $container);
-do_action('wpspaghetti_uftyfacf_bootstrap_after', $container);
+do_action('wpspaghetti_uftyfacf_bootstrap___construct_before');
+do_action('wpspaghetti_uftyfacf_bootstrap___construct_after');
 
 // Plugin loading
-do_action('wpspaghetti_uftyfacf_bootstrap_muplugin_loaded');
-do_action('wpspaghetti_uftyfacf_bootstrap_plugins_loaded');
+do_action('wpspaghetti_uftyfacf_bootstrap_muplugins_loaded_after');
+do_action('wpspaghetti_uftyfacf_bootstrap_plugins_loaded_after');
 
 // Initialization
-do_action('wpspaghetti_uftyfacf_bootstrap_init_before', $container);
-do_action('wpspaghetti_uftyfacf_bootstrap_init_after', $container);
+do_action('wpspaghetti_uftyfacf_bootstrap_init_before');
 do_action('wpspaghetti_uftyfacf_bootstrap_init_acf_not_available');
 do_action('wpspaghetti_uftyfacf_bootstrap_init_mu_plugin_activated');
+do_action('wpspaghetti_uftyfacf_bootstrap_init_after');
 
 // Admin initialization
-do_action('wpspaghetti_uftyfacf_bootstrap_admin_init_before', $container);
-do_action('wpspaghetti_uftyfacf_bootstrap_admin_init_after', $container);
+do_action('wpspaghetti_uftyfacf_bootstrap_admin_init_before');
 do_action('wpspaghetti_uftyfacf_bootstrap_admin_init_deactivated_missing_acf');
-do_action('wpspaghetti_uftyfacf_bootstrap_admin_init_save_settings', $_POST);
+do_action('wpspaghetti_uftyfacf_bootstrap_admin_init_after');
 ```
 
 </details>
@@ -303,12 +302,6 @@ do_action('wpspaghetti_uftyfacf_bootstrap_admin_init_save_settings', $_POST);
 <summary>Field Class</summary>
 
 ```php
-// Field lifecycle
-do_action('wpspaghetti_uftyfacf_field_activate_before', $instance, $hook, $schedule);
-do_action('wpspaghetti_uftyfacf_field_activate_after', $instance, $hook, $schedule, $result);
-do_action('wpspaghetti_uftyfacf_field_deactivate_before', $network_deactivating, $instance, $hook);
-do_action('wpspaghetti_uftyfacf_field_deactivate_after', $network_deactivating, $instance, $hook, $timestamp);
-
 // Field rendering
 do_action('wpspaghetti_uftyfacf_field_render_field_before', $field);
 do_action('wpspaghetti_uftyfacf_field_render_field_after', $field);
@@ -363,29 +356,30 @@ do_action('wpspaghetti_uftyfacf_field_save_video_id_to_field_after', $post_id, $
 </details>
 
 <details>
-<summary>YoutubeApiService Class</summary>
+<summary>ActivationService Class</summary>
 
 ```php
-// Playlist operations
-do_action('wpspaghetti_uftyfacf_youtubeapiservice_get_playlists_by_privacy_status_before', $privacy_status);
-do_action('wpspaghetti_uftyfacf_youtubeapiservice_get_playlists_by_privacy_status_after', $privacy_status, $result);
-do_action('wpspaghetti_uftyfacf_youtubeapiservice_get_playlists_by_privacy_status_error', $exception, $privacy_status);
+// Plugin activation
+do_action('wpspaghetti_uftyfacf_activationservice_activate_before');
+do_action('wpspaghetti_uftyfacf_activationservice_activate_after');
+do_action('wpspaghetti_uftyfacf_activationservice_activate_error', $exception);
 
-// Upload operations
-do_action('wpspaghetti_uftyfacf_youtubeapiservice_get_youtube_upload_url_before', $post_id, $field);
-do_action('wpspaghetti_uftyfacf_youtubeapiservice_get_youtube_upload_url_after', $upload_url, $post_id, $field);
-do_action('wpspaghetti_uftyfacf_youtubeapiservice_upload_video_to_youtube_before', $post_id, $field, $file_data);
-do_action('wpspaghetti_uftyfacf_youtubeapiservice_upload_video_to_youtube_after', $video_id, $post_id, $field);
-do_action('wpspaghetti_uftyfacf_youtubeapiservice_get_video_id_from_upload_before', $upload_id);
-do_action('wpspaghetti_uftyfacf_youtubeapiservice_get_video_id_from_upload_after', $video_id, $upload_id);
+// MU-plugin activation
+do_action('wpspaghetti_uftyfacf_activationservice_activate_mu_plugin_before');
+do_action('wpspaghetti_uftyfacf_activationservice_activate_mu_plugin_after');
+do_action('wpspaghetti_uftyfacf_activationservice_activate_mu_plugin_error', $exception);
+```
 
-// Video management
-do_action('wpspaghetti_uftyfacf_youtubeapiservice_get_videos_by_playlist_before', $playlist_id, $privacy_status);
-do_action('wpspaghetti_uftyfacf_youtubeapiservice_get_videos_by_playlist_after', $playlist_id, $privacy_status, $response, $result);
+</details>
 
-// Resumable uploads
-do_action('wpspaghetti_uftyfacf_youtubeapiservice_create_resumable_upload_request_before', $post_id, $field);
-do_action('wpspaghetti_uftyfacf_youtubeapiservice_create_resumable_upload_request_after', $request_data, $post_id, $field);
+<details>
+<summary>DeactivationService Class</summary>
+
+```php
+// Plugin deactivation
+do_action('wpspaghetti_uftyfacf_deactivationservice_deactivate_before', $network_deactivating);
+do_action('wpspaghetti_uftyfacf_deactivationservice_deactivate_after', $network_deactivating);
+do_action('wpspaghetti_uftyfacf_deactivationservice_deactivate_error', $exception, $network_deactivating);
 ```
 
 </details>
@@ -415,6 +409,35 @@ do_action('wpspaghetti_uftyfacf_cachehandler_aggressive_cache_clear_after');
 </details>
 
 <details>
+<summary>CronService Class</summary>
+
+```php
+// Cron scheduling
+do_action('wpspaghetti_uftyfacf_cronservice_schedule_before', $hook, $schedule);
+do_action('wpspaghetti_uftyfacf_cronservice_schedule_after', $hook, $schedule, $result);
+do_action('wpspaghetti_uftyfacf_cronservice_schedule_error', $hook, $schedule);
+
+// Cron unscheduling
+do_action('wpspaghetti_uftyfacf_cronservice_unschedule_before', $hook, $timestamp);
+do_action('wpspaghetti_uftyfacf_cronservice_unschedule_after', $hook, $timestamp);
+do_action('wpspaghetti_uftyfacf_cronservice_unschedule_error', $hook, $timestamp);
+
+// Cron execution
+do_action('wpspaghetti_uftyfacf_cronservice_execute_cron_before');
+do_action('wpspaghetti_uftyfacf_cronservice_execute_cron_after');
+do_action('wpspaghetti_uftyfacf_cronservice_execute_cron_error', $exception);
+
+// Cron rescheduling
+do_action('wpspaghetti_uftyfacf_cronservice_reschedule_before', $new_schedule);
+do_action('wpspaghetti_uftyfacf_cronservice_reschedule_after', $new_schedule, $result);
+
+// Cron hook callback (actual cron event that fires)
+do_action('wpspaghetti_uftyfacf_cron');
+```
+
+</details>
+
+<details>
 <summary>GoogleClientManager Class</summary>
 
 ```php
@@ -425,11 +448,58 @@ do_action('wpspaghetti_uftyfacf_googleclientmanager_set_google_client_after', $c
 </details>
 
 <details>
-<summary>Cron System (Field Class)</summary>
+<summary>MigrationService Class</summary>
 
 ```php
-// Cron hook for OAuth token maintenance
-do_action('wpspaghetti_uftyfacf_field_check_oauth_token');
+// Migration
+do_action('wpspaghetti_uftyfacf_migrationservice_migrate_all_before');
+do_action('wpspaghetti_uftyfacf_migrationservice_migrate_all_after');
+
+// Options migration
+do_action('wpspaghetti_uftyfacf_migrationservice_migrate_options_before');
+do_action('wpspaghetti_uftyfacf_migrationservice_migrate_options_after', $migrations, $migrated_count);
+
+// Single option migration
+do_action('wpspaghetti_uftyfacf_migrationservice_migrate_option_before', $old_key, $new_key);
+do_action('wpspaghetti_uftyfacf_migrationservice_migrate_option_after', $old_key, $new_key, $old_value);
+do_action('wpspaghetti_uftyfacf_migrationservice_migrate_option_error', $old_key, $new_key, $old_value);
+
+// Scheduled events migration
+do_action('wpspaghetti_uftyfacf_migrationservice_migrate_scheduled_events_before');
+do_action('wpspaghetti_uftyfacf_migrationservice_migrate_scheduled_events_after', $migrations, $migrated_count);
+
+// Single scheduled event migration
+do_action('wpspaghetti_uftyfacf_migrationservice_migrate_scheduled_event_before', $old_hook, $new_hook);
+do_action('wpspaghetti_uftyfacf_migrationservice_migrate_scheduled_event_after', $old_hook, $new_hook, $schedule);
+do_action('wpspaghetti_uftyfacf_migrationservice_migrate_scheduled_event_error', $old_hook, $new_hook);
+```
+
+</details>
+
+<details>
+<summary>YoutubeApiService Class</summary>
+
+```php
+// Playlist operations
+do_action('wpspaghetti_uftyfacf_youtubeapiservice_get_playlists_by_privacy_status_before', $privacy_status);
+do_action('wpspaghetti_uftyfacf_youtubeapiservice_get_playlists_by_privacy_status_after', $privacy_status, $result);
+do_action('wpspaghetti_uftyfacf_youtubeapiservice_get_playlists_by_privacy_status_error', $exception, $privacy_status);
+
+// Upload operations
+do_action('wpspaghetti_uftyfacf_youtubeapiservice_get_youtube_upload_url_before', $post_id, $field);
+do_action('wpspaghetti_uftyfacf_youtubeapiservice_get_youtube_upload_url_after', $upload_url, $post_id, $field);
+do_action('wpspaghetti_uftyfacf_youtubeapiservice_upload_video_to_youtube_before', $post_id, $field, $file_data);
+do_action('wpspaghetti_uftyfacf_youtubeapiservice_upload_video_to_youtube_after', $video_id, $post_id, $field);
+do_action('wpspaghetti_uftyfacf_youtubeapiservice_get_video_id_from_upload_before', $upload_id);
+do_action('wpspaghetti_uftyfacf_youtubeapiservice_get_video_id_from_upload_after', $video_id, $upload_id);
+
+// Video management
+do_action('wpspaghetti_uftyfacf_youtubeapiservice_get_videos_by_playlist_before', $playlist_id, $privacy_status);
+do_action('wpspaghetti_uftyfacf_youtubeapiservice_get_videos_by_playlist_after', $playlist_id, $privacy_status, $response, $result);
+
+// Resumable uploads
+do_action('wpspaghetti_uftyfacf_youtubeapiservice_create_resumable_upload_request_before', $post_id, $field);
+do_action('wpspaghetti_uftyfacf_youtubeapiservice_create_resumable_upload_request_after', $request_data, $post_id, $field);
 ```
 
 </details>
@@ -463,7 +533,7 @@ apply_filters('wpspaghetti_uftyfacf_allowed_html', $allowed_html);
 
 ```php
 // Field instance filtering
-apply_filters('wpspaghetti_uftyfacf_bootstrap_field_instance', $field_instance);
+apply_filters('wpspaghetti_uftyfacf_bootstrap_init_field_instance', $field_instance);
 ```
 
 </details>
@@ -487,10 +557,34 @@ apply_filters('wpspaghetti_uftyfacf_field_before_delete_post_should_delete', $ap
 
 // AJAX field retrieval
 apply_filters('wpspaghetti_uftyfacf_field_wp_ajax_get_youtube_upload_url_field', $field_object);
+```
 
-// Cron configuration
-apply_filters('wpspaghetti_uftyfacf_field_get_cron_schedule_cron_schedule', $cron_schedule);
-apply_filters('wpspaghetti_uftyfacf_field_get_cron_status_status', $status);
+</details>
+
+<details>
+<summary>CacheHandler Class</summary>
+
+```php
+// Cache information
+apply_filters('wpspaghetti_uftyfacf_cachehandler_cache_info', $cache_info);
+apply_filters('wpspaghetti_uftyfacf_cachehandler_cache_clear_methods', $cache_clear_methods);
+
+// Token management
+apply_filters('wpspaghetti_uftyfacf_cachehandler_get_access_token_token', $token, $cache_info);
+apply_filters('wpspaghetti_uftyfacf_cachehandler_save_access_token_token', $token);
+```
+
+</details>
+
+<details>
+<summary>CronService Class</summary>
+
+```php
+// Cron schedule customization
+apply_filters('wpspaghetti_uftyfacf_cronservice_get_cron_schedule', $schedule);
+
+// Cron status information
+apply_filters('wpspaghetti_uftyfacf_cronservice_get_status', $status);
 ```
 
 </details>
@@ -508,16 +602,14 @@ apply_filters('wpspaghetti_uftyfacf_googleclientmanager_set_google_client_client
 </details>
 
 <details>
-<summary>CacheHandler Class</summary>
+<summary>MigrationService Class</summary>
 
 ```php
-// Cache information
-apply_filters('wpspaghetti_uftyfacf_cachehandler_cache_info', $cache_info);
-apply_filters('wpspaghetti_uftyfacf_cachehandler_cache_clear_methods', $cache_clear_methods);
+// Add custom option migrations
+apply_filters('wpspaghetti_uftyfacf_migrationservice_migrate_options_migrations', $migrations);
 
-// Token management
-apply_filters('wpspaghetti_uftyfacf_cachehandler_get_access_token_token', $token, $cache_info);
-apply_filters('wpspaghetti_uftyfacf_cachehandler_save_access_token_token', $token);
+// Add custom scheduled event migrations
+apply_filters('wpspaghetti_uftyfacf_migrationservice_migrate_scheduled_events_migrations', $migrations);
 ```
 
 </details>
