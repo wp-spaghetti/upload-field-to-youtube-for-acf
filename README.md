@@ -331,6 +331,9 @@ do_action('wpspaghetti_uftyfacf_field_settings_page_authorized_after', $oauth, $
 do_action('wpspaghetti_uftyfacf_field_settings_page_error_before', $oauth, $this);
 do_action('wpspaghetti_uftyfacf_field_settings_page_error_after', $oauth, $this);
 
+// Admin settings
+do_action('wpspaghetti_uftyfacf_field_admin_init_save_settings', $_POST);
+
 // AJAX actions
 do_action('wpspaghetti_uftyfacf_field_wp_ajax_get_youtube_upload_url_before', $post_id, $field_key, $field);
 do_action('wpspaghetti_uftyfacf_field_wp_ajax_get_youtube_upload_url_after', $upload_url, $post_id, $field);
