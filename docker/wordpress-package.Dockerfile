@@ -16,7 +16,13 @@ ARG WORDPRESS_SMTP_PASSWORD
 ARG WORDPRESS_SMTP_PROTOCOL
 
 # hadolint ignore=DL3008
-RUN apt-get update \
+RUN if grep -q "buster" /etc/os-release; then \
+        echo "Detected Debian Buster (EOL), using archived repositories" \
+        && sed -i 's|http://deb.debian.org|http://archive.debian.org|g' /etc/apt/sources.list \
+        && sed -i '/security.debian.org/d' /etc/apt/sources.list \
+        && sed -i '/stretch-updates/d' /etc/apt/sources.list; \
+    fi \
+    && apt-get update \
     && apt-get install -y --no-install-recommends \
         # required by composer
         git \
