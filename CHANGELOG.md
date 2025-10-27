@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0](https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/compare/v0.4.2...v0.5.0) (2025-10-27)
+
+### Features
+
+* new Activation, Cron, Deactivation and Migration services ([1ed97b8](https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/commit/1ed97b8e53753f131d616cca84edc5ef7ef5ce6e))
+
+### Bug Fixes
+
+* **docker:** use archived repo for Debian Buster (EOL) ([50470fd](https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/commit/50470fd4807d217d526ced829baf6da608c74894))
+
 ## [0.4.2](https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/compare/v0.4.1...v0.4.2) (2025-10-19)
 
 ## [0.4.2](https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/compare/v0.4.1...v0.4.2) (2025-10-19)
