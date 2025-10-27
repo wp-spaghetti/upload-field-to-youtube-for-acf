@@ -44,7 +44,7 @@ class CacheHandler
         private Container $container,
         private Logger $logger
     ) {
-        $this->init_hook($container);
+        $this->init_hook($this->container);
 
         $this->option_name = $this->container->get('plugin_prefix').'_access_token';
     }

@@ -16,8 +16,12 @@ if (!defined('ABSPATH')) {
 }
 
 use Psr\Container\ContainerInterface;
+use WpSpaghetti\UFTYFACF\Service\ActivationService;
 use WpSpaghetti\UFTYFACF\Service\CacheHandler;
+use WpSpaghetti\UFTYFACF\Service\CronService;
+use WpSpaghetti\UFTYFACF\Service\DeactivationService;
 use WpSpaghetti\UFTYFACF\Service\GoogleClientManager;
+use WpSpaghetti\UFTYFACF\Service\MigrationService;
 use WpSpaghetti\UFTYFACF\Service\YoutubeApiService;
 use WpSpaghetti\WpEnv\Environment;
 use WpSpaghetti\WpLogger\Logger;
@@ -222,10 +226,12 @@ return [
         return new WP_Filesystem_Direct(null);
     },
 
+    ActivationService::class => \DI\autowire(),
     CacheHandler::class => \DI\autowire(),
-
+    CronService::class => \DI\autowire(),
+    DeactivationService::class => \DI\autowire(),
     GoogleClientManager::class => \DI\autowire(),
-
+    MigrationService::class => \DI\autowire(),
     YoutubeApiService::class => \DI\autowire(),
 
     Logger::class => static function (ContainerInterface $container) {

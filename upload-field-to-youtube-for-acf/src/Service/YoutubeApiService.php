@@ -51,7 +51,7 @@ class YoutubeApiService
         private GoogleClientManager $google_client_manager,
         private Logger $logger
     ) {
-        $this->init_hook($container);
+        $this->init_hook($this->container);
 
         $this->field_defaults = $this->container->get('field_defaults');
         $this->env_settings = $this->container->get('env_settings');

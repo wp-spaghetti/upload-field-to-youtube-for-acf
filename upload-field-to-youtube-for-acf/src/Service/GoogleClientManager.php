@@ -44,7 +44,7 @@ class GoogleClientManager
         private CacheHandler $cache_handler,
         private Logger $logger
     ) {
-        $this->init_hook($container);
+        $this->init_hook($this->container);
     }
 
     /**
