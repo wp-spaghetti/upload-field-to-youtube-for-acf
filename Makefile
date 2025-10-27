@@ -446,9 +446,9 @@ help:
 	@echo "  all               - Start environment"
 	@echo "  install           - Start environment and install dependencies"
 	@echo "  dev               - Start development server with HMR"
-	@echo "  qa [script]       - Run quality assurance (qa-node + qa-php)"
+	@echo "  qa [script]       - Run quality assurance (qa-node + qa-wordpress)"
 	@echo "  deploy            - Start environment, install dependencies and deploy to zip and SVN"
-	@echo "  changelog         - Generate CHANGELOG.md with historical releases from git tags
+	@echo "  changelog         - Generate CHANGELOG.md with historical releases from git tags"
 	@echo "  down              - Stop environment"
 	@echo ""
 	@echo "Translation Management:"
