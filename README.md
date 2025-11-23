@@ -72,7 +72,7 @@ If you use Composer to manage WordPress plugins, you can install it from [WordPr
 {
     "require": {
         "composer/installers": "^1.0 || ^2.0",
-        "wpackagist-plugin/upload-field-to-youtube-for-acf": "^0.4"
+        "wpackagist-plugin/upload-field-to-youtube-for-acf": "^0.6"
     },
     "extra": {
         "installer-paths": {
@@ -110,17 +110,17 @@ If you use Composer to manage WordPress plugins, you can install it from this re
 {
     "require": {
         "composer/installers": "^1.0 || ^2.0",
-        "wp-spaghetti/upload-field-to-youtube-for-acf": "^0.4"
+        "wp-spaghetti/upload-field-to-youtube-for-acf": "^0.6"
     },
     "repositories": [
         {
             "type": "package",
             "package": {
                 "name": "wp-spaghetti/upload-field-to-youtube-for-acf",
-                "version": "0.5.0",
+                "version": "0.6.0",
                 "type": "wordpress-plugin",
                 "dist": {
-                    "url": "https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/releases/download/v0.5.0/upload-field-to-youtube-for-acf.zip",
+                    "url": "https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/releases/download/v0.6.0/upload-field-to-youtube-for-acf.zip",
                     "type": "zip"
                 }
             }
@@ -144,17 +144,17 @@ For installations that need updates managed via Git instead of WordPress.org, us
 {
     "require": {
         "composer/installers": "^1.0 || ^2.0",
-        "wp-spaghetti/upload-field-to-youtube-for-acf": "^0.4"
+        "wp-spaghetti/upload-field-to-youtube-for-acf": "^0.6"
     },
     "repositories": [
         {
             "type": "package",
             "package": {
                 "name": "wp-spaghetti/upload-field-to-youtube-for-acf",
-                "version": "0.5.0",
+                "version": "0.6.0",
                 "type": "wordpress-plugin",
                 "dist": {
-                    "url": "https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/releases/download/v0.5.0/upload-field-to-youtube-for-acf--with-git-updater.zip",
+                    "url": "https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf/releases/download/v0.6.0/upload-field-to-youtube-for-acf--with-git-updater.zip",
                     "type": "zip"
                 }
             }
