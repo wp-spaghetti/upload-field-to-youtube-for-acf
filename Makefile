@@ -103,6 +103,7 @@ SVN_ASSETS_DIR=.wordpress-org
 SVN_USERNAME ?=
 SVN_PASSWORD ?=
 SVN_AUTH := $(if $(and $(SVN_USERNAME),$(SVN_PASSWORD)),--username $(SVN_USERNAME) --password $(SVN_PASSWORD),)
+SVN_TIMEOUT ?= 600
 
 # Capture script/action argument
 SCRIPT_ARG := $(word 2,$(MAKECMDGOALS))
@@ -333,7 +334,7 @@ endif
 	@cd $(DIST_DIR)/$(PLUGIN_NAME) && zip -qr ../$(PLUGIN_NAME).zip .
 
 deploy-svn:
-ifeq ($(GITHUB_ACTIONS),true)
+#ifeq ($(GITHUB_ACTIONS),true)
 	@command -v svn >/dev/null 2>&1 || { echo >&2 "❌ svn is required but not installed. Aborting."; exit 1; }
 	@echo "Checking WordPress SVN repository"
 	@if svn ls https://plugins.svn.wordpress.org/$(PLUGIN_NAME)/ >/dev/null 2>&1; then \
@@ -358,7 +359,8 @@ ifeq ($(GITHUB_ACTIONS),true)
 				svn add --force .; \
 				# Removes files that have been deleted from the project \
 				svn status | grep '^!' | awk '{print $$2}' | xargs -r svn delete; \
-				svn $(SVN_AUTH) commit -m "Release version $(PLUGIN_VERSION)"; \
+				# https://wplake.org/blog/how-to-publish-your-own-wordpress-plugin/ \
+				svn $(SVN_AUTH) --config-option=servers:global:http-timeout=$(SVN_TIMEOUT) commit -m "Release version $(PLUGIN_VERSION)"; \
 			}; \
 			# Do not delete DIST_DIR completely, because it is mounted as a volume by docker-compose \
 			rm -rf $(TMP_DIR)/$(SVN_DIR) $(DIST_DIR)/$(PLUGIN_NAME); \
@@ -369,9 +371,9 @@ ifeq ($(GITHUB_ACTIONS),true)
 	else \
 		echo "❌ SVN repository does not exist, skipping..."; \
 	fi
-else
-	@echo "❌ SVN deployment only available in CI, skipping.."
-endif
+#else
+#	@echo "❌ SVN deployment only available in CI, skipping.."
+#endif
 
 crowdin-upload: setup
 ifneq ($(and $(CROWDIN_PROJECT_ID),$(CROWDIN_PERSONAL_TOKEN)),)
