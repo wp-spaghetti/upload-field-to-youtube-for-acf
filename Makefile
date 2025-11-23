@@ -354,7 +354,7 @@ ifeq ($(GITHUB_ACTIONS),true)
 				rsync -a --delete $(DIST_DIR)/$(PLUGIN_NAME)/ $(TMP_DIR)/$(SVN_DIR)/tags/$(PLUGIN_VERSION)/; \
 			fi; \
 			echo "Committing to SVN repository"; \
-			cd $(TMP_DIR)/$(SVN_DIR) && svn add --force .; \
+			cd $(TMP_DIR)/$(SVN_DIR) && svn add --force assets tags trunk; \
 			# Removes files that have been deleted from the project \
 			cd $(TMP_DIR)/$(SVN_DIR) && svn status | grep '^!' | awk '{print $$2}' | xargs -r svn delete; \
 			cd $(TMP_DIR)/$(SVN_DIR) && svn $(SVN_AUTH) commit -m "Release version $(PLUGIN_VERSION)"; \
