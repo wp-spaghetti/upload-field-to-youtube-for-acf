@@ -17,7 +17,7 @@ use WpSpaghetti\UFTYFACF\Bootstrap;
  * Plugin Name: Upload Field to YouTube for ACF
  * Plugin URI: https://github.com/wp-spaghetti/upload-field-to-youtube-for-acf
  * Description: Upload Field to YouTube for ACF is a WordPress plugin that allows you to upload videos directly to YouTube via API from the WordPress admin area and/or select existing videos on your YouTube channel based on playlists.
- * Version: 0.5.0
+ * Version: 0.6.0
  * Requires Plugins: advanced-custom-fields
  * Requires at least: 5.6
  * Tested up to: 6.8
