@@ -1,11 +1,13 @@
 dist/
 tmp/
+venv/
 
 .gitconfig*
 !.gitconfig.dist
 
 docker-compose.*.yml
 
+.claude*
 *.code-workspace
 
 
