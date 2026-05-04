@@ -108,7 +108,7 @@ jobs:
     # Turn OFF "Automatic Analysis" and ensure "CI-based analysis" is enabled.
     - name: SonarQube Scan
       if: matrix.wordpress_tag == 'latest'  
-      uses: SonarSource/sonarqube-scan-action@40f5b61913e891f9d316696628698051136015be
+      uses: SonarSource/sonarqube-scan-action@59db25f34e16620e48ab4bb9e4a5dce155cb5432
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
