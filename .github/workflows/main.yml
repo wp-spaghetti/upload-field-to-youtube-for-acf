@@ -79,7 +79,7 @@ jobs:
       
     - name: Upload coverage to Codecov
       if: matrix.wordpress_tag == 'latest'
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./${{ github.event.repository.name }}/coverage.xml
