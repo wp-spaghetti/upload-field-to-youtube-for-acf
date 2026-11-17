@@ -1,11 +1,40 @@
-dist/
-tmp/
-venv/
+/dist/
+/tmp/
+/venv/
+
+# Composer
+/vendor/
+composer.lock
+composer.develop.*
+composer.phar
+
+# Development plugins installed by Composer (see extra.installer-paths)
+/wp-content/
+
+# Node
+package-lock.json
+
+# Build output
+/assets/
+
+# Local wp-env overrides (may contain credentials)
+.wp-env.override.json
+
+# Tools
+.phpunit.cache/
+.phpunit.result.cache
+.psalm/
+
+grumphp.yml
+!grumphp.yml.dist
+
+.php-cs-fixer*
+!.php-cs-fixer.dist*
+
+.phpstan.neon
+!phpstan.neon.dist
 
 .gitconfig*
-!.gitconfig.dist
-
-docker-compose.*.yml
 
 .claude*
 *.code-workspace
