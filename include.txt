@@ -15,6 +15,7 @@
 - vendor/symfony/console/Resources/
 + vendor/**
 + composer.json
++ LICENSE
 + readme.txt
 + upload-field-to-youtube-for-acf.php
 - *

@@ -5,8 +5,6 @@ on:
   pull_request:
     branches:
       - main
-      - develop
-      - 'support/*'
 
   # Optional: Only for post-merge verification (after PR is already approved).
   # Note: PR merge is technically a "push", so this trigger will fire after successful merges.
@@ -18,24 +16,20 @@ on:
   # Remove this entirely if all branches are properly protected with required PR reviews.
   # push:
   #   branches:
-  #     - develop
+  #     - main
 
 jobs:
   test:
-    name: Tests (Wordpress ${{ matrix.wordpress_tag }})
+    name: Tests (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        mariadb_tag: [
-          latest
-        ]
-        wordpress_tag: [
-          5.9.3,
-          latest
-        ]
-        node_tag: [
-          22
-        ]
+        php: ['8.2', '8.3', '8.4']
+        include:
+          # Coverage and third-party scans run once, on the lowest supported version
+          - php: '8.2'
+            coverage: true
 
     steps:
     - name: Checkout code
@@ -44,45 +38,41 @@ jobs:
         fetch-depth: 0
         fetch-tags: true
 
-    - name: Setup environment
-      uses: ./.github/actions/setup
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
       with:
-        mariadb_tag: ${{ matrix.mariadb_tag }}
-        wordpress_tag: ${{ matrix.wordpress_tag }}
-        node_tag: ${{ matrix.node_tag }}
-        plugin_name: ${{ github.event.repository.name }}
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+        php-version: ${{ matrix.php }}
+        coverage: ${{ matrix.coverage && 'xdebug' || 'none' }}
+        tools: composer:v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    # 10up/wp_mock 1.1.0 requires phpunit/phpunit ^9.6
-    #- name: Setup PHPUnit config
-    #  run: |
-    #    cd ${{ github.event.repository.name }}/
-    #    if [[ $(printf '%s\n' "${{ matrix.wordpress_tag }}" "5.9.3" | sort -V | head -n1) == "${{ matrix.wordpress_tag }}" ]]; then
-    #      cp phpunit-9.xml.dist phpunit.xml.dist
-    #      echo "Using PHPUnit 9 config for Wordpress ${{ matrix.wordpress_tag }}"
-    #    elif [[ $(printf '%s\n' "${{ matrix.wordpress_tag }}" "6.1.1" | sort -V | head -n1) == "${{ matrix.wordpress_tag }}" ]]; then
-    #      cp phpunit-10.xml.dist phpunit.xml.dist
-    #      echo "Using PHPUnit 10 config for Wordpress ${{ matrix.wordpress_tag }}"
-    #    fi
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: 22
+
+    # CI=true makes the Makefile use the tools installed on the runner
+    # instead of Wokenv (see the "Tools" section of the Makefile).
+    - name: Run Makefile 'install' task
+      run: make install
 
     - name: Run Makefile 'qa' task
-      # Variables are passed as Make parameters because the Makefile includes .env
-      # which overrides environment variables, so using env: would be ignored.
-      # See comment in Makefile before "include .env".
-      run: |
-        make qa ci \
-          PLUGIN_NAME=${{ github.event.repository.name }}
+      run: make qa ci
+
+    - name: Run Makefile 'test-js' task
+      run: make test-js
 
     - name: Run Makefile 'qa test:coverage' task
-      if: matrix.wordpress_tag == 'latest'
+      if: matrix.coverage
       run: make qa test:coverage
       
     - name: Upload coverage to Codecov
-      if: matrix.wordpress_tag == 'latest'
+      if: matrix.coverage
       uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./${{ github.event.repository.name }}/coverage.xml
+        files: ./coverage.xml
 
     # Security Compliance Note for SonarCloud and Snyk Actions:
     # Both SonarCloud and Snyk require using full commit SHA instead of version tags
@@ -99,7 +89,7 @@ jobs:
     # 
     # Why disable Automatic Analysis:
     # - Automatic Analysis only analyzes main branch + 5 most recent PRs
-    # - It cannot analyze feature/develop branches that are part of your git-flow
+    # - It cannot analyze feature branches
     # - CI-based analysis provides full control over which branches to analyze
     # - Cannot run both analysis methods simultaneously (causes build failures)
     # - CI-based gives better integration with existing GitHub Actions workflow
@@ -107,36 +97,31 @@ jobs:
     # To disable: SonarCloud UI → Project → Administration → Analysis Method → 
     # Turn OFF "Automatic Analysis" and ensure "CI-based analysis" is enabled.
     - name: SonarQube Scan
-      if: matrix.wordpress_tag == 'latest'  
-      uses: SonarSource/sonarqube-scan-action@40f5b61913e891f9d316696628698051136015be
+      if: matrix.coverage  
+      uses: SonarSource/sonarqube-scan-action@59202af334b4ba7b5db01b701b8e79f8b3bef0f4 # v8.5.0
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
     - name: Run Snyk to check for vulnerabilities (PHP)
-      if: matrix.wordpress_tag == 'latest'
+      if: matrix.coverage
       continue-on-error: true
-      uses: snyk/actions/php@9adf32b1121593767fc3c057af55b55db032dc04
+      uses: snyk/actions/php@9adf32b1121593767fc3c057af55b55db032dc04 # v1.0.0
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
-        args: --severity-threshold=high --sarif-file-output=snyk.sarif --file=${{ github.event.repository.name }}/composer.lock
+        args: --severity-threshold=high --sarif-file-output=snyk.sarif --file=composer.lock
         
     - name: Upload Snyk results to GitHub Code Scanning
-      if: matrix.wordpress_tag == 'latest'
+      if: matrix.coverage
       uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: snyk.sarif
         
     - name: Run Snyk to check for vulnerabilities (Node.js)
-      if: matrix.wordpress_tag == 'latest'
+      if: matrix.coverage
       continue-on-error: true
-      uses: snyk/actions/node@9adf32b1121593767fc3c057af55b55db032dc04
+      uses: snyk/actions/node@9adf32b1121593767fc3c057af55b55db032dc04 # v1.0.0
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
-        args: --severity-threshold=high --file=${{ github.event.repository.name }}/package.json
-
-    - name: Shutdown environment
-      uses: ./.github/actions/shutdown
-      with:
-        cleanup_mode: basic
+        args: --severity-threshold=high --file=package.json

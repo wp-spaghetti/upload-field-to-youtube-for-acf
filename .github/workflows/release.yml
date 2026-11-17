@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - 'support/*'
 
 permissions:
   contents: write
@@ -55,8 +54,8 @@ jobs:
           GIT_COMMITTER_NAME: github-actions[bot]
           GIT_COMMITTER_EMAIL: github-actions[bot]@users.noreply.github.com
 
-  deploy:
-    name: Deploy Release
+  build:
+    name: Build Release Assets
     runs-on: ubuntu-latest
     needs: release
     if: needs.release.outputs.new_release_published == 'true'
@@ -69,33 +68,35 @@ jobs:
           fetch-tags: true
           ref: v${{ needs.release.outputs.new_release_version }}
 
-      - name: Setup environment
-        uses: ./.github/actions/setup
+      # The archives are built on the lowest supported PHP version, so that
+      # the bundled vendor/ directory is compatible with every supported one.
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
-          mode: production
-          mariadb_tag: latest
-          wordpress_tag: 5.9.3 # PHP 8.0.21 for vendor compatibility
-          node_tag: 22
-          plugin_name: ${{ github.event.repository.name }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          svn_username: ${{ secrets.SVN_USERNAME }}
-          svn_password: ${{ secrets.SVN_PASSWORD }}
-          crowdin_project_id: ${{ secrets.CROWDIN_PROJECT_ID }}
-          crowdin_personal_token: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2, wp-cli
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y gettext subversion
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
 
-      #https://github.com/orgs/community/discussions/25641#discussioncomment-3248571
-      - name: Run Makefile 'deploy-ci' task
-        # Variables are passed as Make parameters because the Makefile includes .env
-        # which overrides environment variables, so using env: would be ignored.
-        # See comment in Makefile before "include .env".
-        run: |
-          make deploy-ci \
-            MODE=production \
-            PLUGIN_NAME=${{ github.event.repository.name }} \
-            PLUGIN_VERSION=${{ needs.release.outputs.new_release_version }}
+      # CI=true makes the Makefile use the tools installed on the runner
+      # instead of Wokenv (see the "Tools" section of the Makefile).
+      - name: Run Makefile 'install' task
+        run: make install
+
+      - name: Run Makefile 'crowdin-download' and 'mo' tasks
+        run: make crowdin-download mo
+        env:
+          CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+
+      - name: Run Makefile 'dist' task
+        run: make dist
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
@@ -111,7 +112,42 @@ jobs:
             dist/${{ github.event.repository.name }}--with-git-updater.zip
           generate_release_notes: true
 
-      - name: Shutdown environment
-        uses: ./.github/actions/shutdown
+      - name: Store the WordPress.org archive
+        uses: actions/upload-artifact@v4
         with:
-          cleanup_mode: basic
+          name: wordpress-org
+          path: dist/${{ github.event.repository.name }}.zip
+          if-no-files-found: error
+
+  deploy-svn:
+    name: Deploy to WordPress.org
+    runs-on: ubuntu-latest
+    needs: [release, build]
+    # Add required reviewers to this environment (Settings > Environments) to
+    # hold the WordPress.org deployment until the GitHub release has been
+    # verified. Without protection rules the job runs right after the build.
+    environment: wordpress-org
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: v${{ needs.release.outputs.new_release_version }}
+
+      - name: Download the WordPress.org archive
+        uses: actions/download-artifact@v4
+        with:
+          name: wordpress-org
+          path: dist
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y subversion
+
+      - name: Extract the archive
+        run: unzip -q dist/${{ github.event.repository.name }}.zip -d dist/${{ github.event.repository.name }}
+
+      - name: Run Makefile 'deploy-svn' task
+        run: make deploy-svn VERSION=${{ needs.release.outputs.new_release_version }}
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}

@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/wokenv/wokenv/main/schemas/wokenv-schema.json
+
+# Wokenv configuration: the only environment file this project commits.
+# https://github.com/wokenv/wokenv/blob/main/docs/configuration.md
+
+# What this directory contains: plugin, theme, core or none.
+type: plugin
+
+# Catch every email WordPress sends: true, false or a custom port.
+mailpit: true
+
+# Everything below is a standard wp-env configuration, the same keys as
+# .wp-env.json: https://developer.wordpress.org/block-editor/reference-guides/packages/packages-env/
+#
+# To test against another WordPress or PHP version without editing this file:
+#   WP_ENV_CORE=WordPress/WordPress#6.5 WP_ENV_PHP_VERSION=8.4 wokenv start --update
+#
+# Machine-specific settings and credentials (e.g. the Google OAuth constants)
+# belong in .wp-env.override.json, see .wp-env.override.json.dist.
+wp-env:
+  # Lowest PHP version supported by the plugin (see "Requires PHP").
+  phpVersion: "8.2"
+  port: 8888
+  phpmyadminPort: 9000
+  testsEnvironment: false
+  config:
+    WP_DEBUG: true
+    WP_DEBUG_LOG: true
+    WP_DEBUG_DISPLAY: false
+    SCRIPT_DEBUG: true
+    WP_ENVIRONMENT_TYPE: local

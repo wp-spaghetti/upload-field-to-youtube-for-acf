@@ -46,7 +46,6 @@
         "friendsofphp/php-cs-fixer": "^3.86",
         "hoppinger/advanced-custom-fields-wpcli": "dev-master",
         "humanmade/psalm-plugin-wordpress": "^3.1",
-        "inpsyde/wonolog": "2.x-dev",
         "jameelmoses/wordpress-kint-debugger": "^2.0",
         "mockery/mockery": "^1.6",
         "nikic/php-parser": "^4.0 || ^5.0",
@@ -76,12 +75,13 @@
         "wpackagist-plugin/plugin-check": "^1.0",
         "wpackagist-plugin/query-monitor": "^3.16",
         "wpackagist-plugin/rewrite-rules-inspector": "^1.4",
+        "wpackagist-plugin/wonolog": "^0.3",
         "wpackagist-plugin/wp-cfm": "^1.7",
         "wpackagist-plugin/wp-crontrol": "^1.19",
         "wpackagist-plugin/wp-debugging": "^2.11"
     },
     "suggest": {
-        "inpsyde/wonolog": "For enhanced logging capabilities and better debugging experience"
+        "wp-spaghetti/wonolog": "For enhanced logging capabilities and better debugging experience"
     },
     "repositories": [
         {
@@ -131,7 +131,7 @@
             "YouTube"
         ],
         "installer-paths": {
-            "/bitnami/wordpress/wp-content/plugins/{$name}/": [
+            "wp-content/plugins/{$name}/": [
                 "type:wordpress-plugin"
             ]
         }
