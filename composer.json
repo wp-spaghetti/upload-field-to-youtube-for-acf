@@ -68,27 +68,28 @@
         "vimeo/psalm": "^5.26 || ^6.13",
         "wordpress-plugin/acf-repeater": "^2.2",
         "wp-coding-standards/wpcs": "^3.1",
-        "wpackagist-plugin/acf-repeater-flexible-content-collapser": "^1.2",
-        "wpackagist-plugin/advanced-custom-fields": "^5.9 || ^6.0",
-        "wpackagist-plugin/classic-editor": "^1.6",
-        "wpackagist-plugin/debug-bar": "^1.1",
-        "wpackagist-plugin/plugin-check": "^1.0",
-        "wpackagist-plugin/query-monitor": "^3.16",
-        "wpackagist-plugin/rewrite-rules-inspector": "^1.4",
-        "wpackagist-plugin/wonolog": "^0.3",
-        "wpackagist-plugin/wp-cfm": "^1.7",
-        "wpackagist-plugin/wp-crontrol": "^1.19",
-        "wpackagist-plugin/wp-debugging": "^2.11"
+        "wp-plugin/acf-repeater-flexible-content-collapser": "^1.2",
+        "wp-plugin/advanced-custom-fields": "^5.9 || ^6.0",
+        "wp-plugin/classic-editor": "^1.6",
+        "wp-plugin/debug-bar": "^1.1",
+        "wp-plugin/plugin-check": "^1.0",
+        "wp-plugin/query-monitor": "^3.16",
+        "wp-plugin/rewrite-rules-inspector": "^1.4",
+        "wp-plugin/wp-cfm": "^1.7",
+        "wp-plugin/wp-crontrol": "^1.19",
+        "wp-plugin/wp-debugging": "^2.11",
+        "wp-spaghetti/wonolog": "^0.3"
     },
     "suggest": {
         "wp-spaghetti/wonolog": "For enhanced logging capabilities and better debugging experience"
     },
     "repositories": [
         {
+            "name": "wp-packages",
             "type": "composer",
-            "url": "https://wpackagist.org",
+            "url": "https://repo.wp-packages.org",
             "only": [
-                "wpackagist-plugin/*"
+                "wp-plugin/*"
             ]
         },
         {
@@ -102,6 +103,18 @@
         {
             "type": "vcs",
             "url": "https://github.com/frugan-dev/acf-repeater"
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "wp-spaghetti/wonolog",
+                "version": "0.3.2",
+                "type": "wordpress-plugin",
+                "dist": {
+                    "url": "https://github.com/wp-spaghetti/wonolog/releases/download/v0.3.2/wonolog.zip",
+                    "type": "zip"
+                }
+            }
         }
     ],
     "autoload": {
