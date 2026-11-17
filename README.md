@@ -22,7 +22,7 @@ To use this plugin, you need to configure Google oAuth credentials so the plugin
 
 ## Requirements
 
-- PHP ^8.0
+- PHP ^8.2
 - WordPress ^5.7 || ^6.0
 - [Advanced Custom Fields](https://www.advancedcustomfields.com) ^5.9 || ^6.0
 

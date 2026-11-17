@@ -21,7 +21,7 @@ use WpSpaghetti\UFTYFACF\Bootstrap;
  * Requires Plugins: advanced-custom-fields
  * Requires at least: 5.6
  * Tested up to: 6.8
- * Requires PHP: 8.0
+ * Requires PHP: 8.2
  * Author: Frugan
  * Author URI: https://github.com/wp-spaghetti
  * License: GPLv3 or later
